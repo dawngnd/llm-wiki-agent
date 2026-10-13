@@ -1,0 +1,13 @@
+{
+  "name": "llm-wiki-agent",
+  "version": "1.0.0",
+  "description": "Plugin biến coding agent thành wiki ingest/maintenance agent — truy cập filesystem trực tiếp, tách biệt hoàn toàn với MCP",
+  "author": {
+    "name": "dangnd",
+    "url": "https://github.com/dawngnd/llm_wiki"
+  },
+  "homepage": "https://github.com/dawngnd/llm_wiki",
+  "repository": "https://github.com/dawngnd/llm_wiki",
+  "license": "MIT",
+  "keywords": ["wiki", "knowledge-base", "second-brain", "ingest", "filesystem", "llm-wiki"]
+}
