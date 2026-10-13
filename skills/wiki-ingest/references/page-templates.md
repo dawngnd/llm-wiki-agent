@@ -6,6 +6,7 @@ Location: `wiki/sources/`
 
 ```yaml
 ---
+title: "Tiêu đề tài liệu nguồn"
 type: sources
 tags: [relevant, tags]
 sources: [original-filename.md]
@@ -49,6 +50,7 @@ Location: `wiki/entities/`
 
 ```yaml
 ---
+title: "Tên thực thể"
 type: entities
 tags: [relevant, tags]
 sources: [source-1.md, source-2.md]
@@ -85,6 +87,7 @@ Location: `wiki/concepts/`
 
 ```yaml
 ---
+title: "Tên khái niệm"
 type: concepts
 tags: [relevant, tags]
 sources: [source-1.md, source-2.md]
@@ -121,6 +124,7 @@ Location: `wiki/synthesis/`
 
 ```yaml
 ---
+title: "Tiêu đề phân tích"
 type: synthesis
 tags: [relevant, tags]
 sources: [page-1.md, page-2.md]

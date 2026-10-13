@@ -143,7 +143,7 @@ Naming rules:
 - If colliding with a concept/entity name, append `-source` (e.g. `api-gateway-source.md`).
 
 Structure: Consult `references/page-templates.md`. Must include:
-- Frontmatter with `type: sources`, `tags: [...]`, `sources: [filename]`, `created`, `updated`
+- Frontmatter with `title: "..."`, `type: sources`, `tags: [...]`, `sources: [filename]`, `created`, `updated`
 - `# Title (Tiêu đề)`
 - `## Summary (Tóm tắt)`
 - `## Key Claims (Các khẳng định chính)`
