@@ -37,6 +37,10 @@ Tóm tắt cấu trúc của nội dung tài liệu nguồn.
 ## Concepts Covered (Khái niệm được đề cập)
 
 - [[concept-name]] — ngữ cảnh tóm tắt
+
+## Questions (Câu hỏi mở)
+
+- Vấn đề hoặc câu hỏi chưa được làm rõ trong tài liệu nguồn
 ```
 
 ## Entity Page
@@ -59,6 +63,10 @@ updated: YYYY-MM-DD
 ## Overview (Tổng quan)
 
 Mô tả thực thể.
+
+## Context (Ngữ cảnh)
+
+Mô tả bối cảnh entity xuất hiện, vai trò trong hệ thống hoặc mối liên kết nghiệp vụ.
 
 ## Key Facts (Thông tin chính)
 
@@ -96,6 +104,10 @@ updated: YYYY-MM-DD
 
 - Điểm 1
 - Điểm 2
+
+## Examples (Ví dụ)
+
+- Ví dụ minh họa thực tế cho khái niệm này.
 
 ## Related (Liên quan)
 

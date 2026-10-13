@@ -9,256 +9,239 @@ description: >-
   "có file mới trong raw/", or mentions ingesting/processing
   new content into the wiki knowledge base. Works by reading source
   files directly from the filesystem and writing wiki pages.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Wiki Ingest
 
-Process raw source documents into structured, interlinked wiki pages by reading and writing files directly on the filesystem.
+Process source documents into structured, interlinked wiki pages by reading and writing files directly on the filesystem, tracking state via SHA256 hashes, maximizing knowledge capture, and enforcing strict language conventions.
 
-## Prerequisites
+## Prerequisites & Project Resolution
 
-Verify the wiki directory structure before ingesting:
+The user specifies the target project path when invoking this skill. The wiki structure must follow:
 
 ```
-project/
+<project_root>/
 ├── wiki/
+│   ├── .meta/        # Metadata & hash registry (ingest-hashes.json)
 │   ├── sources/      # Source summary pages
-│   ├── entities/     # Entity pages (people, orgs, products)
+│   ├── entities/     # Entity pages (people, orgs, products, services)
 │   ├── concepts/     # Concept pages (ideas, frameworks, patterns)
 │   ├── synthesis/    # Analysis and comparison pages
 │   ├── index.md      # Master index of all pages
 │   └── log.md        # Activity log
-└── raw/              # Unprocessed source documents
+└── [sources/raw/...] # Source documents specified by user
 ```
 
+Ensure required directories exist:
+
 ```bash
-# Check and create missing directories
-for dir in wiki/sources wiki/entities wiki/concepts wiki/synthesis; do
+PROJECT_PATH="<path-specified-by-user>"
+for dir in "$PROJECT_PATH"/wiki/{.meta,sources,entities,concepts,synthesis}; do
   mkdir -p "$dir"
 done
 
-# Create index and log if absent
-touch wiki/index.md wiki/log.md
+# Initialize index, log, and hash registry if absent
+touch "$PROJECT_PATH/wiki/index.md" "$PROJECT_PATH/wiki/log.md"
+if [ ! -f "$PROJECT_PATH/wiki/.meta/ingest-hashes.json" ]; then
+  echo '{"_version": 1, "entries": {}}' > "$PROJECT_PATH/wiki/.meta/ingest-hashes.json"
+fi
 ```
 
-Abort if `wiki/` does not exist at all — prompt the user to initialize the wiki first.
+Abort if the specified path does not exist or cannot be initialized.
 
-## Source Discovery
+---
 
-Determine which files need ingestion using one of three methods:
+## Input Modes & Source Discovery
 
-**Method 1: User-specified files.** Process the file(s) the user names. Verify each path exists and is a readable text file before proceeding.
+Operate in one of three modes depending on user intent:
 
-**Method 2: Auto-detect unprocessed files.**
+1. **Mode `file` (Single file):** User specifies a direct file path (e.g., `ingest /path/to/doc.md`).
+2. **Mode `dir` (Directory batch):** User specifies a folder. Scan for all `.md` files and process them **serially** (one-by-one).
+3. **Mode `auto` (Hash-detected unprocessed):** Scan candidate directory for `.md` files whose SHA256 hashes are not in `wiki/.meta/ingest-hashes.json`.
+
+### Hash Verification
+
+Before processing any file, compute its SHA256 hash:
 
 ```bash
-# List raw sources (excluding assets and binary files)
-find raw/ -name "*.md" -not -path "raw/assets/*" 2>/dev/null
-
-# List changelogs if base_knowledge exists
-find ../base_knowledge/changelogs/ -name "*.md" 2>/dev/null
-
-# Quick check for binary files that should be skipped
-file raw/* | grep -v "text" | grep -v "empty"
+FILE_HASH=$(sha256sum "$SOURCE_FILE" | awk '{print $1}')
 ```
 
-Read `wiki/log.md` and extract filenames from `ingest` entries. Compare against the file listings. Any file not mentioned in the log is unprocessed.
+Check against `wiki/.meta/ingest-hashes.json`:
+- If the hash is already present in `entries`: Inform the user that the file content was already ingested on the recorded date, show associated pages, and ask if they wish to re-ingest (force) or skip.
+- If not present: Proceed with the ingest pipeline.
 
-**Method 3: No files found.** Inform the user that all sources have been processed. If `raw/` is empty, state explicitly: "The raw/ directory contains no source documents."
-
-**Edge cases:**
-- **Binary files** (PDFs, images, .docx) in `raw/` — skip with a warning. Only `.md` files are ingestible.
-- **Empty files** — skip with a note: "source-file.md is empty, skipping."
-- **Very large files** (>500 lines) — process normally but warn the user that analysis may be lengthy. Consider chunking the read if the file exceeds 2000 lines.
-- **Subdirectories in raw/** — recurse into them: `find raw/ -name "*.md" -type f`.
+---
 
 ## Ingest Pipeline
 
-Execute each phase in order for every source file.
+Execute each phase in strict order for every file. When processing multiple files, complete all phases and confirmations for one file before proceeding to the next.
 
-### Phase 1: Read and Analyze
+### Phase 1a: Structural Analysis
 
-Read the entire source file. Identify the document type (article, paper, transcript, notes, changelog).
+1. Read the full source file content.
+2. Identify document type: article, paper, transcript, meeting notes, changelog, architecture spec.
+3. Construct a structural section map (hierarchy of headings, logical flow).
+4. Identify the original document language.
+5. **Handling images and diagrams:** If the source references images (`![...](...)`), read them if they contain structured data (system architectures, flowcharts, schemas). Incorporate extracted data into analysis. Preserve referenced image links.
 
-**Handling images and diagrams:** If the source references images (`![...](...)`), read them separately when they contain structured data — architecture diagrams, flowcharts, data tables, or screenshots with visible text. Extract key information from visuals and incorporate into the analysis. For decorative images, note their existence but do not extract content. Copy referenced images to `raw/assets/` if not already there, preserving relative paths.
+### Phase 1b: Semantic Analysis & Entity Extraction
 
-Extract from the content:
-- **3-5 key takeaways** — the most important ideas
-- **Entities** — people, organizations, products, tools, services
-- **Concepts** — ideas, frameworks, theories, patterns, architectures
-- **Potential wikilinks** — names that match or relate to existing wiki pages
+Extract core information with a **maximization policy** (atomic notes):
+- **3-5 Key Takeaways:** Core points and thesis of the document.
+- **Entities:** All people, organizations, tools, products, APIs, services mentioned. **Every entity mentioned, even once, warrants an entity page** (stubs are welcomed and encouraged).
+- **Concepts:** All ideas, frameworks, architectural patterns, theories, workflows. **Every concept mentioned warrants a concept page**.
+- **Questions & Gaps:** Open issues, ambiguities, or unanswered points raised in the source.
+- **Potential Wikilinks:** Map extracted terms to existing pages in the wiki.
 
-Present the analysis to the user in a structured summary. Ask:
-> "Key takeaways from [source] are listed above. Emphasize any particular aspects? Skip any topics?"
+### 🔒 Confirmation Gate 1
 
-Wait for confirmation before proceeding to the next phase.
+Present the extraction summary to the user:
+```markdown
+### Phân tích tài liệu: [Tên file]
+- **Loại tài liệu:** [Type]
+- **Ngôn ngữ gốc:** [Lang]
+- **Key Takeaways:** [3-5 điểm]
+- **Entities phát hiện:** [Danh sách - đánh dấu mới vs cập nhật]
+- **Concepts phát hiện:** [Danh sách - đánh dấu mới vs cập nhật]
+- **Cơ hội liên kết (Wikilinks):** [Danh sách]
+```
+Ask:
+> "Bạn có muốn nhấn mạnh, điều chỉnh danh sách entities/concepts, hoặc bỏ qua phần nào trước khi ghi vào wiki không?"
+
+**Wait for confirmation before writing any files.**
+
+---
 
 ### Phase 2: Search Existing Context
 
-Before creating any new pages, search for existing related content to avoid duplicates:
+Search existing wiki pages to prevent redundant creations and identify merge targets:
 
 ```bash
-# Exact match search for each entity/concept name across wiki
-grep -rli "entity-name" wiki/ --include="*.md"
-
-# Fuzzy matching: search for partial names and common variations
-grep -rli "entity" wiki/ --include="*.md"
-grep -rli "ent-name" wiki/ --include="*.md"
-
-# Check for similar filenames (handles abbreviations, alternate slugs)
-find wiki/ -name "*entity*" -o -name "*concept*"
-
-# Example: searching for "CoreBankClient" should also try:
-grep -rli "core-bank-client" wiki/ --include="*.md"
-grep -rli "core bank" wiki/ --include="*.md"
-grep -rli "CoreBank" wiki/ --include="*.md"
+# Search for entity/concept variations
+grep -rli "entity-name" "$PROJECT_PATH/wiki/" --include="*.md"
+find "$PROJECT_PATH/wiki/" -name "*entity-name*.md"
 ```
 
-**Decision tree for matches:**
+Match rules:
+- Exact or clear semantic match → **Update** existing page.
+- Duplicate pages found → Flag to user and plan merge.
+- No match → **Create** new page.
 
-| Scenario | Action |
-|---|---|
-| Exact filename match in correct directory | **Update** existing page |
-| Exact filename match in wrong directory (e.g., entity filed as concept) | **Update** in place, do not move — note the miscategorization for later cleanup |
-| Content match but different filename | Read the matched file. If it covers the same topic → **update** it. If different topic with same keyword → **create** new page |
-| Partial/fuzzy match only | Read the matched file to verify. Same topic → **update**. Different topic → **create** new page |
-| No match at all | **Create** new page |
-| **Duplicate entities** — two existing pages cover the same topic | Flag to user: "Found potential duplicates: [[page-a]] and [[page-b]]. Recommend merging." Update the more complete page and add a redirect note to the other |
+---
 
 ### Phase 3: Create Source Summary Page
 
-Create a new file in `wiki/sources/` with the slugified source name.
+Write to `wiki/sources/<slugified-source-name>.md`.
 
-**Naming rules:**
-- Filename MUST be kebab-case with `.md` extension
-- If the source document covers an entity/concept that will also have its own page, append `-source` to avoid collision. Example: `api-standard-source.md` (because `api-standard.md` will exist in `wiki/concepts/`)
-- PascalCase names MUST be split: `CoreBankClient` → `core-bank-client.md`
-- Acronyms stay lowercase: `API Gateway` → `api-gateway.md`
-- Version numbers use hyphens: `Release v2.1` → `release-v2-1.md`
-- Vietnamese diacritics MUST be stripped: `Tổng quan` → `tong-quan.md`
-- Consecutive hyphens collapse: `my--file` → `my-file.md`
-- Maximum filename length: 60 characters (truncate meaningfully, do not cut mid-word)
+**Strict Language Rule:**
+Even if the original document is in English or another language, **all wiki page content must be written in Vietnamese with bilingual headers and technical terms**.
 
-**Frontmatter template:**
+Naming rules:
+- Kebab-case only (`my-source-summary.md`), lowercase, no diacritics, max 60 chars.
+- If colliding with a concept/entity name, append `-source` (e.g. `api-gateway-source.md`).
 
-```yaml
+Structure: Consult `references/page-templates.md`. Must include:
+- Frontmatter with `type: sources`, `tags: [...]`, `sources: [filename]`, `created`, `updated`
+- `# Title (Tiêu đề)`
+- `## Summary (Tóm tắt)`
+- `## Key Claims (Các khẳng định chính)`
+- `## Entities Mentioned (Thực thể được nhắc đến)`
+- `## Concepts Covered (Khái niệm được đề cập)`
+- `## Questions (Câu hỏi mở)`
+
 ---
-type: sources
-tags: [relevant, tags]
-sources: [original-filename.md]
-created: YYYY-MM-DD
-updated: YYYY-MM-DD
----
-```
-
-**Tags rule:** Use `open-spec` for sources from `../base_knowledge/changelogs/`, `urd` for sources from `raw/`.
-
-Content sections: Summary, Key Claims, Entities Mentioned, Concepts Covered. Consult `references/page-templates.md` for the full template structure including bilingual headers.
-
-**Critical:** Source pages are **factual only**. No interpretation, analysis, or opinion. Save that for concept or synthesis pages. If the source contains the author's opinions, attribute them clearly: "Theo [author], ..." (According to [author], ...).
 
 ### Phase 4: Create or Update Entity and Concept Pages
 
-For **each entity** (person, org, product, tool) mentioned:
-- If page exists → read it, merge new information, add source to `sources:` frontmatter, update `updated:` date
-- If no page exists → create in `wiki/entities/` with frontmatter and focused content
+For **every** identified entity → write/update in `wiki/entities/`.
+For **every** identified concept → write/update in `wiki/concepts/`.
 
-For **each concept** (idea, framework, theory, pattern):
-- Same logic, but create in `wiki/concepts/`
+**Template Requirements:**
+- **Entity pages:** Must include `## Context (Ngữ cảnh)` describing the role/system context in addition to `Overview` and `Key Facts`.
+- **Concept pages:** Must include `## Examples (Ví dụ)` providing concrete illustrations in addition to `Definition` and `Key Points`.
 
-**Update merge strategy — when updating existing pages:**
-
-1. **Read the existing page completely** before making any changes.
-2. **Frontmatter merge:** Append the new source filename to `sources: [...]` array. Update `updated:` date. Preserve all existing tags, add new ones if relevant.
-3. **Content merge:** Add new facts under existing sections. Do NOT delete or overwrite existing content. If the new source provides more detail on an existing point, expand inline with a source citation: `(from [[new-source]])`.
-4. **Contradiction handling:** If the new source contradicts existing content, do NOT silently overwrite. Instead, add a `## Contradictions (Mâu thuẫn)` section (or append to it if one exists):
+**Update & Contradiction Strategy:**
+1. Append new source to `sources:` array in frontmatter.
+2. Add new facts with citations `(from [[source-slug]])`. Never delete existing valid facts.
+3. **Contradictions:** Never silently overwrite. When a claim conflicts with existing knowledge, append to or create:
    ```markdown
    ## Contradictions (Mâu thuẫn)
-   - **Topic:** [[source-a]] states X, but [[source-b]] states Y. Requires resolution.
+   - **Chủ đề:** [[source-a]] nêu rằng X, nhưng [[source-b]] nêu rằng Y. Cần xác minh thêm.
    ```
-   Preserve both claims. Never pick a winner without user instruction.
-5. **Related links:** Merge new `[[wikilinks]]` into the Related section, avoiding duplicates.
+   Retain both claims.
 
-**Volume expectation:** A single source typically touches **10-15 wiki pages**. This is normal. Prefer updating existing pages over creating new ones. If a source mentions an entity/concept only in passing (one sentence, no substantive info), add a brief mention to the existing page or skip creating a new page — not every mention deserves its own page.
+---
 
-### Phase 5: Cross-linking
+### Phase 4.5: Synthesis Opportunity Detection
 
-Add `[[wikilinks]]` between all related pages:
-- Source pages link to entities and concepts they mention
-- Entity pages link to related entities, concepts, and sources
-- Concept pages link to related concepts, entities, and sources
+Check if the newly ingested source shares significant themes or references (≥2 sources touching the same cluster of entities/concepts).
 
-**Wikilink format:** `[[kebab-case-name]]` — no `.md` extension, always kebab-case.
+If detected, identify the synthesis opportunity:
+> "Phát hiện chủ đề [[topic]] đã có 2+ nguồn tài liệu liên quan ([[source-1]], [[source-2]]). Có cơ hội tạo trang tổng hợp so sánh (synthesis page)."
 
-**Bidirectional link strategy:** Every link must be bidirectional. When adding `[[entity-a]]` to a source page, also open `entity-a.md` and add a backlink to the source page. Build a link map before writing:
+Note this opportunity in the ingest report and suggest running `wiki-research` or creating a synthesis page.
 
-```
-source-page.md  → [[entity-a]], [[concept-b]]
-entity-a.md     → [[source-page]], [[concept-b]]
-concept-b.md    → [[source-page]], [[entity-a]]
-```
+---
 
-**Link validation step:** After adding all links, verify every target exists on disk:
+### Phase 5: Cross-linking (Bidirectional)
 
+Ensure all connections are **bidirectional**:
+- Source links to entities/concepts: `[[entity-name]]`
+- Entity/concept links back to source: `[[source-slug]]`
+- Format: `[[kebab-case-slug]]` (never use spaces, uppercase, or `.md` extension).
+
+Verify all wikilinks resolve to actual files:
 ```bash
-# Extract all wikilinks from recently created/updated files
-grep -oP '\[\[([^\]]+)\]\]' wiki/sources/new-page.md | tr -d '[]' | sort -u | while read slug; do
-  if ! find wiki/ -name "${slug}.md" | grep -q .; then
-    echo "BROKEN LINK: [[${slug}]] — target file not found"
-  fi
+grep -roh '\[\[[^]]*\]\]' "$PROJECT_PATH/wiki/sources/new-page.md" | sed 's/\[\[//;s/\]\]//' | while read slug; do
+  find "$PROJECT_PATH/wiki/" -name "${slug}.md" | grep -q . || echo "BROKEN LINK: [[$slug]]"
 done
 ```
+Resolve any broken links immediately by generating the stub page or fixing the slug.
 
-Fix broken links immediately: either create the missing page (if the entity/concept is substantive enough) or remove the link. Never leave broken wikilinks.
+---
 
-### Phase 6: Update Index and Log
+### Phase 6: Update Index, Log & Hash Registry
 
-**Index update:** Add one entry per new page to `wiki/index.md` under the correct category header (`## Sources`, `## Entities`, `## Concepts`). If the category header does not exist, create it:
+1. **Update `wiki/index.md`:** Add newly created pages under `## Sources`, `## Entities`, `## Concepts` with a concise summary (<120 chars).
+2. **Append to `wiki/log.md`:**
+   ```markdown
+   ## [YYYY-MM-DD] ingest | Source Title
+   Processed `source-filename.md` (SHA256: `abcd1234...`).
+   Created N pages, updated M pages.
+   Entities: [[entity-1]], [[entity-2]]. Concepts: [[concept-1]].
+   ```
+3. **Update `wiki/.meta/ingest-hashes.json`:**
+   Register the file hash, filepath, ingest date, and affected pages:
+   ```json
+   "hash_value": {
+     "filename": "source-file.md",
+     "original_path": "/path/to/source-file.md",
+     "ingest_date": "YYYY-MM-DD",
+     "pages_created": ["source-slug", "entity-1"],
+     "pages_updated": ["concept-2"]
+   }
+   ```
 
-```markdown
-- [[page-name]] — one-line summary (under 120 characters)
-```
+---
 
-Do NOT add duplicate entries. Check before appending:
+### Phase 7: Report Results & Cross-Skill Suggestions
 
-```bash
-grep -q "page-name" wiki/index.md
-```
+Present a clean summary to the user:
+- Pages created & updated (with clickable wikilinks)
+- Contradictions recorded (if any)
+- Broken links verified/fixed
+- **Cross-Skill Next Steps:**
+  - 🔍 **wiki-lint:** Gợi ý chạy kiểm tra sức khỏe nếu đã ingest ≥ 10 tài liệu kể từ lần lint trước.
+  - 🔬 **wiki-research:** Gợi ý đào sâu hoặc tạo synthesis page nếu Phase 4.5 phát hiện cơ hội tổng hợp.
+  - 🕸️ **wiki-graph:** Gợi ý xem đồ thị quan hệ để trực quan hóa các kết nối mới hình thành.
 
-**Log entry:** Append to `wiki/log.md`:
+---
 
-```markdown
-## [YYYY-MM-DD] ingest | Source Title
-Processed source-filename.md. Created N new pages, updated M existing pages.
-New entities: [[entity-1]], [[entity-2]]. New concepts: [[concept-1]].
-```
+## Content & Language Conventions
 
-Use today's date. One log entry per source file processed.
-
-### Phase 7: Report Results
-
-Present to the user:
-- Pages created (with `[[wikilinks]]` and full paths)
-- Pages updated (what changed — new sections, added facts, updated frontmatter)
-- Entities and concepts identified (distinguish new vs. updated)
-- Contradictions found (if any, cite both sources and quote the conflicting claims)
-- Broken links fixed or remaining (if any)
-- Suggest running `wiki-lint` if more than 10 sources have been ingested since last lint
-
-## Content Conventions
-
-- **Language:** Vietnamese with bilingual headers (`## Summary (Tóm tắt)`)
-- **Technical terms:** Bilingual format (`Cache (Bộ nhớ đệm)`)
-- **Contradictions:** Always note them, cite both sources, never silently overwrite
-- **Pages location:** ALL pages MUST be in `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, or `wiki/synthesis/`
-- **Images:** Store in `raw/assets/`. Reference from wiki pages using relative paths. Do not embed base64 images in markdown.
-- **Large documents:** If a single source generates more than 20 new pages, pause after Phase 4 and confirm with the user before cross-linking.
-
-## Additional Resources
-
-### Reference Files
-
-For detailed templates and checklists, consult these files bundled with this skill:
-- **`references/page-templates.md`** — Complete frontmatter and content templates for all four page types (sources, entities, concepts, synthesis). Use these templates as the starting point for every new page. Contains bilingual header format and section structure.
-- **`references/ingest-checklist.md`** — Pre/during/post-ingest quality checklist with quality gates. Run through this checklist after completing Phase 6 to catch missing frontmatter fields, broken wikilinks, miscategorized pages, and naming violations before reporting results to the user.
+- **Ngôn ngữ bắt buộc:** Tiếng Việt là ngôn ngữ chủ đạo cho toàn bộ nội dung wiki.
+- **Bilingual Headers & Terms:** Các tiêu đề lớn và thuật ngữ kỹ thuật sử dụng định dạng song ngữ: `## Summary (Tóm tắt)`, `Cache (Bộ nhớ đệm)`.
+- **Tên biến, mã nguồn, định danh API:** Giữ nguyên dạng gốc tiếng Anh.
+- **File gốc trong raw/sources:** Giữ nguyên vẹn, không bao giờ tự ý xóa hoặc di chuyển file nguồn gốc.

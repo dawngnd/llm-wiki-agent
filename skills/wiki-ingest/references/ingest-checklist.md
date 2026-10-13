@@ -1,29 +1,36 @@
 # Ingest Quality Checklist
 
 ## Pre-Ingest
-- [ ] Source file readable and complete
-- [ ] Wiki directory structure exists (`wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `wiki/synthesis/`)
-- [ ] `wiki/index.md` and `wiki/log.md` exist
-- [ ] Searched existing wiki pages for duplicates (grep)
+- [ ] Project path validated (chứa thư mục `wiki/`)
+- [ ] Metadata directory `wiki/.meta/` tồn tại, `ingest-hashes.json` đã sẵn sàng
+- [ ] Source file readable and text-based (Markdown)
+- [ ] Hash (SHA256) của source file đã được tính và kiểm tra (chưa ingest hoặc force)
+- [ ] Searched existing wiki pages for duplicates (grep / filename scan)
 
 ## During Ingest
-- [ ] Source summary page created in `wiki/sources/` with proper frontmatter
-- [ ] All entities identified and pages created/updated in `wiki/entities/`
-- [ ] All concepts identified and pages created/updated in `wiki/concepts/`
-- [ ] Wikilinks added between all related pages
-- [ ] Naming conventions followed (kebab-case filenames, kebab-case wikilinks)
-- [ ] Content written in Vietnamese with bilingual headers
-- [ ] No contradictions left unnoted
+- [ ] Phase 1a & 1b: Phân tích cấu trúc & ngữ nghĩa thành công
+- [ ] Confirmation Gate: User đã duyệt danh sách takeaways, entities, concepts
+- [ ] **Language Rule:** Nội dung wiki hoàn toàn bằng Tiếng Việt với bilingual headers/technical terms (bất kể ngôn ngữ file gốc)
+- [ ] Source summary page tạo trong `wiki/sources/` có mục `## Questions (Câu hỏi mở)`
+- [ ] Tối đa hóa entity & concept: Mọi thực thể/khái niệm được nhắc đến đều có page (kể cả stub)
+- [ ] Entity page có section `## Context (Ngữ cảnh)`
+- [ ] Concept page có section `## Examples (Ví dụ)`
+- [ ] Synthesis opportunity check (Phase 4.5): Đã đối chiếu nếu có ≥2 sources cùng chủ đề
+- [ ] Wikilinks hai chiều (bidirectional) đầy đủ
+- [ ] Naming conventions tuân thủ: kebab-case cho filename và wikilinks
+- [ ] Không có mâu thuẫn (contradictions) bị bỏ qua hay ghi đè âm thầm
 
 ## Post-Ingest
-- [ ] `wiki/index.md` updated with new entries under correct category
-- [ ] `wiki/log.md` entry appended with ingest summary
-- [ ] Search verification: `grep -rl "new-page-name" wiki/` returns results
-- [ ] User informed of results
+- [ ] `wiki/index.md` đã cập nhật các trang mới
+- [ ] `wiki/log.md` đã ghi nhận hoạt động ingest
+- [ ] `wiki/.meta/ingest-hashes.json` đã ghi nhận SHA256 và danh sách pages ảnh hưởng
+- [ ] Broken links check: Toàn bộ wikilinks mới trỏ tới các file thực tế tồn tại
+- [ ] Báo cáo kết quả đầy đủ và gợi ý các bước kế tiếp (`wiki-lint`, `wiki-research`, `wiki-graph`)
 
 ## Quality Gates
-- [ ] Source page is factual only (no interpretation)
-- [ ] Each wikilink target file exists on disk
-- [ ] Frontmatter `type` field matches directory name
-- [ ] No PascalCase or Title Case in wikilinks
-- [ ] Tags include `open-spec` (from changelogs) or `urd` (from raw)
+- [ ] Source page chỉ nêu sự thật khách quan (không tự diễn giải/phán xét)
+- [ ] Ngôn ngữ tuân thủ 100% chuẩn song ngữ Việt - Anh của wiki
+- [ ] Mỗi wikilink target file phải tồn tại trên ổ đĩa
+- [ ] Frontmatter `type` field khớp với tên thư mục chứa
+- [ ] Không có PascalCase hay Title Case trong wikilinks
+- [ ] Hash SHA256 được lưu chính xác trong registry
