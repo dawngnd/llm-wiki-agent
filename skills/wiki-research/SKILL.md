@@ -67,7 +67,7 @@ For each relevant page identified in broad discovery, execute a systematic deep 
 
 **Per-page process:**
 1. Read the full page content — extract key claims, facts, dates, and figures.
-2. Note the page's `type`, `tags`, `sources` from frontmatter — these indicate provenance and reliability.
+2. Note the page's `type`, `category`, `tags`, `sources` from frontmatter — these indicate provenance, domain, and reliability.
 3. Extract all `[[wikilinks]]` from the page.
 4. Classify each linked page as: directly relevant (read next), tangentially related (read if time permits), or unrelated (skip).
 
@@ -137,12 +137,12 @@ Classify each subtopic into one of four categories:
 **Create a coverage matrix:**
 
 ```markdown
-| Subtopic | Status | Wiki Page | Notes |
-|----------|--------|-----------|-------|
-| Core architecture | Covered | [[service-architecture]] | Comprehensive |
-| Caching strategy | Shallow | mentioned in [[service-architecture]] | No dedicated page |
-| Performance metrics | Missing | — | Expected but absent |
-| Legacy migration | Stale | [[legacy-migration-source]] | Updated 2023-06, likely outdated |
+| Subtopic | Category | Status | Wiki Page | Notes |
+|----------|----------|--------|-----------|-------|
+| Core architecture | system-design | Covered | [[service-architecture]] | Comprehensive |
+| Caching strategy | system-design | Shallow | mentioned in [[service-architecture]] | No dedicated page |
+| Performance metrics | system-design | Missing | — | Expected but absent |
+| Legacy migration | system-design | Stale | [[legacy-migration-source]] | Updated 2023-06, likely outdated |
 ```
 
 This matrix becomes the actionable output of the research — it tells the user exactly where to invest effort next.
@@ -207,7 +207,7 @@ Present this report to the user. All claims must be cited with `[[wikilinks]]`. 
 
 After presenting the synthesis report, offer a decision tree:
 
-- **Save as synthesis page:** Write the report to `wiki/synthesis/research-[topic].md` with proper frontmatter (`type: synthesis`, `tags`, `sources` listing all cited pages, `created`/`updated` dates). Add an entry to `wiki/index.md` under the Synthesis section. Append to `wiki/log.md`:
+- **Save as synthesis page:** Write the report to `wiki/synthesis/research-[topic].md` with proper frontmatter (`type: synthesis`, `category`, `tags`, `sources` listing all cited pages, `created`/`updated` dates). Add an entry to `wiki/index.md` under the Synthesis section. Append to `wiki/log.md`:
   ```markdown
   ## [YYYY-MM-DD] research | Topic Name
   Deep research on [topic]. Read N pages, found M connections, identified K gaps.

@@ -131,6 +131,7 @@ Extract core information with a **controlled granularity policy** — create sta
 - **3-5 Key Takeaways:** Core points and thesis of the document.
 - **Entities:** All people, organizations, tools, products, APIs, services mentioned. Apply **Entity Granularity Rules** (see below) to decide standalone page vs inline mention.
 - **Concepts:** All ideas, frameworks, architectural patterns, theories, workflows. Apply **Concept Granularity Rules** (see below) to decide standalone page vs inline mention.
+- **Category determination:** Xác định lĩnh vực kiến thức chính (category) của tài liệu dựa trên nội dung và chủ đề. Giá trị category là chuỗi kebab-case, ví dụ: `ai`, `ai-agent`, `system-design`, `java-programming`, `finance`, `economics`, `data-analyst`, `devops`. Nếu tài liệu thuộc nhiều lĩnh vực, chọn lĩnh vực **chính** (primary domain).
 - **Questions & Gaps:** Open issues, ambiguities, or unanswered points raised in the source.
 - **Potential Wikilinks:** Map extracted terms to existing pages in the wiki.
 
@@ -191,6 +192,7 @@ Present the extraction summary to the user, **including granularity decisions**:
 ### Phân tích tài liệu: [Tên file]
 - **Loại tài liệu:** [Type]
 - **Ngôn ngữ gốc:** [Lang]
+- **Category đề xuất:** [category-value] — Lý do: [giải thích ngắn]
 - **Key Takeaways:** [3-5 điểm]
 - **Entities phát hiện:**
   - `[STANDALONE]` entity-name — Lý do: ≥3 facts / primary subject → full page
@@ -236,7 +238,7 @@ Naming rules:
 - If colliding with a concept/entity name, append `-source` (e.g. `api-gateway-source.md`).
 
 Structure: Consult `references/page-templates.md`. Must include:
-- Frontmatter with `title: "..."`, `type: sources`, `tags: [...]`, `sources: [filename]`, `created`, `updated`
+- Frontmatter with `title: "..."`, `type: sources`, `category: <category-value>`, `tags: [...]`, `sources: [filename]`, `created`, `updated`
 - `# Title (Tiêu đề)`
 - `## Summary (Tóm tắt)`
 - `## Key Claims (Các khẳng định chính)`
@@ -266,9 +268,10 @@ For each entity/concept extracted in Phase 1b, create or update pages based on c
 
 **Update & Contradiction Strategy:**
 1. Append new source to `sources:` array in frontmatter.
-2. Add new facts with citations `(from [[source-slug]])`. Never delete existing valid facts.
-3. **Stub → Full upgrade:** If an existing stub page receives ≥3 new facts from the current source, upgrade it to a full page and remove `stub: true` from frontmatter.
-4. **Contradictions:** Never silently overwrite. When a claim conflicts with existing knowledge, append to or create:
+2. Verify `category` field exists; if missing, add based on page content and current source's category.
+3. Add new facts with citations `(from [[source-slug]])`. Never delete existing valid facts.
+4. **Stub → Full upgrade:** If an existing stub page receives ≥3 new facts from the current source, upgrade it to a full page and remove `stub: true` from frontmatter.
+5. **Contradictions:** Never silently overwrite. When a claim conflicts with existing knowledge, append to or create:
    ```markdown
    ## Contradictions (Mâu thuẫn)
    - **Chủ đề:** [[source-a]] nêu rằng X, nhưng [[source-b]] nêu rằng Y. Cần xác minh thêm.

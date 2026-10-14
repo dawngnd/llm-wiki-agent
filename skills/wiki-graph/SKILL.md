@@ -208,9 +208,11 @@ For each broken link, suggest one of:
 
 ## 8. Category Analysis
 
-Analyze the graph structure per wiki directory to reveal cross-category linking patterns.
+Analyze the graph structure per wiki directory **and** per knowledge-domain `category` (from frontmatter) to reveal cross-category linking patterns.
 
-Count edges between all category pairs:
+### 8.1 By Directory Type
+
+Count edges between all directory-type pairs:
 
 | From ↓ / To → | sources | entities | concepts | synthesis |
 |---------------|---------|----------|----------|-----------|
@@ -227,6 +229,32 @@ Build this matrix by mapping each page to its category (the subdirectory it live
 - Concepts → concepts being high suggests a well-built conceptual framework
 - Synthesis → everything should be high (synthesis pages are meant to integrate)
 - Any zero cell in the matrix suggests a disconnected category pair worth investigating
+
+### 8.2 By Knowledge Domain (Category)
+
+Group pages by their frontmatter `category` field and count edges between domain pairs:
+
+```bash
+# Extract category per page
+for f in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ \
+  -name "*.md" 2>/dev/null); do
+  page=$(basename "$f" .md)
+  cat_val=$(grep "^category:" "$f" | head -1 | awk '{print $2}')
+  [ -n "$cat_val" ] && echo "$page $cat_val"
+done > /tmp/wiki-page-categories.txt
+
+# Cross-reference with edge list to build domain-pair matrix
+while IFS=' -> ' read src tgt; do
+  src_cat=$(grep "^$src " /tmp/wiki-page-categories.txt | awk '{print $2}')
+  tgt_cat=$(grep "^$tgt " /tmp/wiki-page-categories.txt | awk '{print $2}')
+  [ -n "$src_cat" ] && [ -n "$tgt_cat" ] && echo "$src_cat -> $tgt_cat"
+done < /tmp/wiki-edges.txt | sort | uniq -c | sort -rn
+```
+
+**Interpretation:**
+- High cross-domain links (e.g., `ai -> system-design`) indicate knowledge areas that naturally overlap.
+- Isolated domains with zero outbound links to other domains suggest siloed knowledge — investigate whether cross-references are missing.
+- Domains with many pages but low link density may need internal structuring
 
 ## 9. Visualization Output
 

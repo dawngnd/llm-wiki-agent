@@ -31,7 +31,8 @@
 - [ ] Source page chỉ nêu sự thật khách quan (không tự diễn giải/phán xét)
 - [ ] Ngôn ngữ tuân thủ 100% chuẩn song ngữ Việt - Anh của wiki
 - [ ] Mỗi wikilink target file phải tồn tại trên ổ đĩa
-- [ ] Frontmatter chứa đầy đủ các trường bắt buộc (`title`, `type`, `created`, `updated`, `tags`, `sources`)
+- [ ] Frontmatter chứa đầy đủ các trường bắt buộc (`title`, `type`, `category`, `created`, `updated`, `tags`, `sources`)
 - [ ] Frontmatter `type` field khớp với tên thư mục chứa
+- [ ] Frontmatter `category` field tồn tại và có giá trị kebab-case hợp lệ
 - [ ] Không có PascalCase hay Title Case trong wikilinks
 - [ ] Hash SHA256 được lưu chính xác trong registry

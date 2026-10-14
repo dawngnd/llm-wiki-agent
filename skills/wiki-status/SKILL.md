@@ -62,6 +62,13 @@ echo "entities:  $ENTITIES"
 echo "concepts:  $CONCEPTS"
 echo "synthesis: $SYNTHESIS"
 echo "total:     $TOTAL"
+
+# Count pages per category
+echo -e "\n=== By Category ==="
+for f in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ \
+  -name "*.md" 2>/dev/null); do
+  grep "^category:" "$f" | awk '{print $2}'
+done | sort | uniq -c | sort -rn
 ```
 
 Calculate the percentage distribution across directories:
@@ -267,6 +274,12 @@ Format all collected metrics into a clean, scannable dashboard. Use emoji indica
    synthesis:  N pages  (XX%)
    ─────────────────────
    total:      N pages
+
+📂 By Category
+    ai:             N pages
+    system-design:  N pages
+    finance:        N pages
+    ...
 
 📦 Sources
    raw available:  N

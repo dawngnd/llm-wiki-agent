@@ -62,6 +62,9 @@ grep -rn "event sourcing" wiki/ --include="*.md" -B2 -A2
 
 # Regex for partial/variant matching (useful for Vietnamese diacritics)
 grep -rliP "micro.?service|vi.?d.?ch.?v.?" wiki/ --include="*.md"
+
+# Filter by category — narrow results to a specific knowledge domain
+grep -rl "^category: ai" wiki/ --include="*.md"
 ```
 
 **Keyword extraction rules:**
@@ -120,7 +123,7 @@ Build a **relevance-ordered reading list**: pages with more inbound links from a
 
 Read matched pages in priority order: synthesis > entities/concepts > sources. For each page:
 
-1. Read frontmatter `tags` and `type` to confirm relevance.
+1. Read frontmatter `tags`, `type`, and `category` to confirm relevance and domain match.
 2. Scan headers (`##`) to locate relevant sections — avoid reading entire long pages when only one section matters.
 3. Extract key claims, data points, and relationships.
 4. Note which page each piece of information came from (for citation).
@@ -155,7 +158,7 @@ When the answer draws from multiple pages:
 
 - **Merge complementary information** into a coherent narrative rather than listing page-by-page summaries.
 - **Handle contradictions** by citing both pages and flagging the conflict: "Theo [[page-a]], timeout là 30s. Tuy nhiên [[page-b]] ghi nhận timeout 60s. Cần xác minh giá trị hiện tại."
-- **Authority ranking**: synthesis pages > entity/concept pages > source pages. When in conflict, prefer the page with a more recent `updated` date in frontmatter.
+- **Authority ranking**: synthesis pages > entity/concept pages > source pages. When in conflict, prefer the page with a more recent `updated` date in frontmatter. When the query targets a specific domain, prioritize pages whose `category` matches the query domain.
 - **Cross-reference check**: if a claim appears in multiple independent pages, note the convergence — it increases confidence.
 
 ## No Results Handling — Xử Lý Không Có Kết Quả

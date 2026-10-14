@@ -174,6 +174,7 @@ Validate YAML frontmatter on every page and auto-fix what is safe to fix:
 | Field | Rule | Auto-fixable? |
 |-------|------|---------------|
 | `type` | Must match directory: `sources`, `entities`, `concepts`, `synthesis` | Yes |
+| `category` | Must exist, valid kebab-case string (e.g., `ai`, `system-design`) | Semi — infer from `tags` and content |
 | `created` | Must exist, format `YYYY-MM-DD` | Yes — use file modification date |
 | `updated` | Must exist, format `YYYY-MM-DD` | Yes — use today's date |
 | `sources` | Array, required on entity/concept pages | No — needs context |
@@ -272,7 +273,7 @@ After completing all fixes, generate a structured summary and append it to `wiki
 - Fixed N broken wikilinks (N title-case, N pascal-case, N extension removals)
 - Added N missing pages to wiki/index.md
 - Removed N stale entries from wiki/index.md
-- Patched frontmatter on N pages (N type fixes, N date additions, N tag format fixes)
+- Patched frontmatter on N pages (N type fixes, N category additions, N date additions, N tag format fixes)
 - Added N cross-reference wikilinks
 
 ### Manual fixes applied
