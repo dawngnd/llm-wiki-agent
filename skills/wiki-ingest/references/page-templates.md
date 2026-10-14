@@ -118,6 +118,66 @@ updated: YYYY-MM-DD
 - [[related-concept]]
 ```
 
+## Entity Stub Page
+
+Location: `wiki/entities/`
+Used when an entity is classified as `[INLINE]` but still needs its own page.
+
+```yaml
+---
+title: "Tên thực thể"
+type: entities
+stub: true
+tags: [relevant, tags]
+sources: [source-1.md]
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+---
+```
+
+```markdown
+# Entity Name (Tên thực thể)
+
+Mô tả ngắn gọn 1-2 câu về entity dựa trên thông tin có sẵn.
+
+Xem chi tiết tại [[parent-page-slug]].
+
+## Related (Liên quan)
+
+- [[parent-page-slug]]
+- [[source-slug]]
+```
+
+## Concept Stub Page
+
+Location: `wiki/concepts/`
+Used when a concept is classified as `[INLINE]` but still needs its own page.
+
+```yaml
+---
+title: "Tên khái niệm"
+type: concepts
+stub: true
+tags: [relevant, tags]
+sources: [source-1.md]
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+---
+```
+
+```markdown
+# Concept Name (Tên khái niệm)
+
+Mô tả ngắn gọn 1-2 câu về concept dựa trên thông tin có sẵn.
+
+Xem chi tiết tại [[parent-page-slug]].
+
+## Related (Liên quan)
+
+- [[parent-page-slug]]
+- [[source-slug]]
+```
+
 ## Synthesis Page
 
 Location: `wiki/synthesis/`
