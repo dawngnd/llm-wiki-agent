@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Golden Ground Truth for wiki-ingest benchmark fixtures with Coverage & Faithfulness specs",
+  "fixtures": {
+    "banking-drift-test.md": {
+      "source_file": "banking-drift-test.md",
+      "expected_source_slug": "tai-lieu-thiet-ke-ky-thuat-he-thong-xu-ly-giao-dich-thanh-toan-v2",
+      "required_entities": [
+        "paymentgateway",
+        "transactionengine",
+        "corebanking",
+        "kafkacluster",
+        "rediscache"
+      ],
+      "entity_aliases": {
+        "paymentgateway": ["payment-gateway", "ipay-client"],
+        "transactionengine": ["transaction-engine"],
+        "corebanking": ["core-banking", "he-thong-corebanking"],
+        "kafkacluster": ["kafka", "kafka-cluster"],
+        "rediscache": ["redis", "redis-cache"]
+      },
+      "required_concepts": [
+        "outbox-pattern",
+        "idempotency-key",
+        "saga-orchestration-pattern"
+      ],
+      "concept_aliases": {
+        "outbox-pattern": ["transactional-outbox", "outbox"],
+        "idempotency-key": ["idempotency", "khoa-idempotent"],
+        "saga-orchestration-pattern": ["saga-pattern", "saga-orchestration", "saga"]
+      },
+      "coverage_checkpoints": [
+        {
+          "id": "v1_bottleneck",
+          "description": "Nghẽn cổ chai kiến trúc V1 (Oracle DB, REST API, 450 TPS, 2500ms latency)",
+          "pattern": "450.*tps|oracle|2500ms"
+        },
+        {
+          "id": "v2_goals",
+          "description": "Mục tiêu hiệu năng V2 (3000 TPS, latency p99 < 300ms, Eventual Consistency)",
+          "pattern": "3000.*tps|300ms|eventual consistency"
+        },
+        {
+          "id": "outbox_debezium_cdc",
+          "description": "Cơ chế Outbox Pattern dùng Debezium CDC Connector và bảng outbox_events",
+          "pattern": "outbox_events|debezium.*cdc|at-least-once"
+        },
+        {
+          "id": "idempotency_ttl",
+          "description": "Cơ chế Idempotency Key dùng Redis TTL 86400s (24h) với UUIDv4",
+          "pattern": "86400|24.*h|uuidv4"
+        },
+        {
+          "id": "saga_compensation",
+          "description": "Saga Orchestrator điều phối giao dịch bù (Compensating Transactions) thay thế 2PC",
+          "pattern": "compensating transactions|giao dịch bù|saga orchestrator"
+        },
+        {
+          "id": "timeout_and_retry",
+          "description": "Ràng buộc Timeout CoreBanking 3500ms, Circuit Breaker, và Retry tối đa 3 lần với Backoff",
+          "pattern": "3500ms|circuit breaker|exponential backoff|retry.*3"
+        },
+        {
+          "id": "acid_2pc_contradiction",
+          "description": "Mâu thuẫn kiến trúc: Bác bỏ Two-Phase Commit (2PC) quy định trong tài liệu V1",
+          "pattern": "two-phase commit|2pc|bác bỏ|mâu thuẫn"
+        }
+      ],
+      "required_metrics": [
+        {"name": "v1_tps", "pattern": "450"},
+        {"name": "v2_target_tps", "pattern": "3000"},
+        {"name": "v2_latency", "pattern": "300ms"},
+        {"name": "timeout", "pattern": "3500ms"},
+        {"name": "max_retries", "pattern": "3"},
+        {"name": "redis_ttl", "pattern": "86400|24"}
+      ],
+      "forbidden_hallucinations": [
+        "microservices chassis",
+        "istio service mesh",
+        "graphql federated gateway",
+        "kubernetes horizontal pod autoscaler",
+        "rabbitmq",
+        "mongodb",
+        "redis sentinel",
+        "grpc streaming",
+        "docker swarm"
+      ]
+    },
+    "qkv-attention.md": {
+      "source_file": "qkv-attention.md",
+      "expected_source_slug": "hoi-thoai-nghien-cuu-chuyen-sau-ba-vecto-trong-co-che-chu-y",
+      "required_entities": [
+        "transformer"
+      ],
+      "required_concepts": [
+        "attention-mechanism",
+        "query-key-value",
+        "kv-cache",
+        "softmax"
+      ],
+      "concept_aliases": {
+        "attention-mechanism": ["co-che-chu-y", "attention"],
+        "query-key-value": ["qkv", "qkv-attention", "ba-vecto-qkv", "query-key-value-vectors"],
+        "kv-cache": ["key-value-cache", "kv-caching"],
+        "softmax": ["softmax-function", "ham-softmax"]
+      },
+      "coverage_checkpoints": [
+        {
+          "id": "three_projection_matrices",
+          "description": "Ba ma trận trọng số chiếu: W_Q, W_K, W_V và vai trò Q, K, V",
+          "pattern": "w_q|w_k|w_v|bậc tự do"
+        },
+        {
+          "id": "three_step_math",
+          "description": "Quy trình 3 bước toán học: Score chia căn d_k, Softmax chuẩn hoá, Weighted sum của V",
+          "pattern": "sqrt\\(d_k\\)|\\sqrt\\{d_k\\}|weighted sum|tổng hợp có trọng số"
+        },
+        {
+          "id": "beijing_weather_example",
+          "description": "Ví dụ Thời tiết Bắc Kinh (trọng số 0.55 thời tiết, 0.35 Bắc Kinh, 0.05 ở)",
+          "pattern": "bắc kinh|thời tiết|0\\.55|0\\.35"
+        },
+        {
+          "id": "causal_heatmap_lower_triangular",
+          "description": "Bản đồ nhiệt nhân quả Causal Heatmap cấu trúc tam giác dưới trong Decoder-only",
+          "pattern": "tam giác dưới|causal heatmap|lower triangular"
+        },
+        {
+          "id": "kv_cache_complexity",
+          "description": "KV Cache giảm độ phức tạp tính toán từ O(t^2) xuống O(t)",
+          "pattern": "o\\(t\\^2\\).*o\\(t\\)|o\\(t\\^2\\) xuống o\\(t\\)|độ phức tạp.*o\\(t\\)"
+        }
+      ],
+      "required_metrics": [
+        {"name": "weather_weight", "pattern": "0\\.55"},
+        {"name": "beijing_weight", "pattern": "0\\.35"},
+        {"name": "complexity_reduction", "pattern": "O\\(t\\^2\\).*O\\(t\\)"}
+      ],
+      "forbidden_hallucinations": [
+        "flashattention-v2",
+        "rope-rotary-position-embedding",
+        "moe-mixture-of-experts",
+        "multi-query attention",
+        "grouped-query attention",
+        "pagedattention"
+      ]
+    }
+  }
+}

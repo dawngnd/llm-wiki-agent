@@ -110,6 +110,17 @@ Chạy bằng: trigger skill `wiki-autonomous-ops` hoặc dùng `/goal`, `/sched
 | Deep research | Không | Có |
 | Quality checklists | Không | Có (references/) |
 
+## Benchmark & Testing Suite (Đo lường sai lệch LLM Reasoning)
+
+Plugin tích hợp bộ công cụ đo lường độ ổn định (Reasoning Stability Index - RSI) và phát hiện sai lệch khi LLM ingest tài liệu qua nhiều lần chạy:
+
+- **Fixtures:** Các tài liệu mẫu kèm ground truth tại `benchmark/fixtures/`.
+- **Đánh giá đơn lẻ:** `./benchmark/run_eval.py --eval <wiki_dir> --fixture <fixture_name>`
+- **Đo lường sai lệch (Drift):** `./benchmark/run_eval.py --compare run1 run2 run3 --report report.md`
+- **Khởi tạo Sandbox:** `./benchmark/run_eval.py --init-sandbox /tmp/eval --runs 3`
+
+Xem chi tiết hướng dẫn tại [benchmark/README.md](file:///home/dangnd/.gemini/config/plugins/llm-wiki-agent/benchmark/README.md).
+
 ## License
 
 MIT
