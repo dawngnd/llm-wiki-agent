@@ -26,6 +26,7 @@ The user specifies the target project path when invoking this skill. The wiki st
 │   └── sources/     # Archive of ingested source files (auto-copied from external paths)
 ├── wiki/
 │   ├── .meta/        # Metadata & hash registry (ingest-hashes.json)
+│   ├── assets/       # Images, SVGs, diagrams referenced by wiki pages
 │   ├── sources/      # Source summary pages
 │   ├── entities/     # Entity pages (people, orgs, products, services)
 │   ├── concepts/     # Concept pages (ideas, frameworks, patterns)
@@ -39,7 +40,7 @@ Ensure required directories exist:
 
 ```bash
 PROJECT_PATH="<path-specified-by-user>"
-for dir in "$PROJECT_PATH"/wiki/{.meta,sources,entities,concepts,synthesis}; do
+for dir in "$PROJECT_PATH"/wiki/{.meta,assets,sources,entities,concepts,synthesis}; do
   mkdir -p "$dir"
 done
 
@@ -122,7 +123,192 @@ Execute each phase in strict order for every file. When processing multiple file
 2. Identify document type: article, paper, transcript, meeting notes, changelog, architecture spec.
 3. Construct a structural section map (hierarchy of headings, logical flow).
 4. Identify the original document language.
-5. **Handling images and diagrams:** If the source references images (`![...](...)`), read them if they contain structured data (system architectures, flowcharts, schemas). Incorporate extracted data into analysis. Preserve referenced image links.
+5. **Handling images, SVGs, and diagrams:** Scan the source for **all** media references and preserve them in the wiki.
+
+#### Image & SVG Discovery
+
+Scan the source file for all image references and inline SVGs:
+
+```bash
+# Find all markdown image references: ![alt](path)
+grep -oP '!\[([^\]]*)\]\(([^)]+)\)' "$SOURCE_FILE"
+
+# Find all HTML img tags: <img src="...">
+grep -oP '<img[^>]+src="([^"]+)"' "$SOURCE_FILE"
+
+# Find inline SVG blocks: <svg>...</svg>
+grep -cP '<svg[\s>]' "$SOURCE_FILE"
+```
+
+Classify each reference:
+- **Local file reference** (`![](./images/arch.png)`, `![](../diagrams/flow.svg)`) — resolve path relative to source file location.
+- **Absolute path reference** (`![](/home/user/img.png)`) — use as-is.
+- **URL reference** (`![](https://example.com/img.png)`) — preserve URL as-is, do NOT download.
+- **Inline SVG** (`<svg>...</svg>` embedded directly in markdown) — extract and save as file.
+
+#### Asset Copying (Sao chép tài nguyên media)
+
+For each **local or absolute** image/SVG reference found:
+
+```bash
+ASSETS_DIR="$PROJECT_PATH/wiki/assets"
+
+# Resolve the image path relative to the source file's directory
+SOURCE_DIR=$(dirname "$SOURCE_FILE")
+IMG_REF="path-from-markdown"  # e.g., ./images/arch.png
+IMG_PATH=$(realpath -m "$SOURCE_DIR/$IMG_REF" 2>/dev/null || echo "$IMG_REF")
+
+if [ -f "$IMG_PATH" ]; then
+  BASENAME=$(basename "$IMG_PATH")
+  DEST="$ASSETS_DIR/$BASENAME"
+
+  # Avoid collision: if same name exists with different content, prefix with hash
+  if [ -f "$DEST" ]; then
+    EXISTING_HASH=$(sha256sum "$DEST" | awk '{print $1}')
+    NEW_HASH=$(sha256sum "$IMG_PATH" | awk '{print $1}')
+    if [ "$EXISTING_HASH" != "$NEW_HASH" ]; then
+      SHORT_HASH=$(echo "$NEW_HASH" | cut -c1-8)
+      DEST="$ASSETS_DIR/${SHORT_HASH}-${BASENAME}"
+    fi
+  fi
+
+  cp "$IMG_PATH" "$DEST"
+  echo "🖼️ Copied asset: $BASENAME → $DEST"
+else
+  echo "⚠️ Missing asset: $IMG_PATH (referenced in source but file not found)"
+fi
+```
+
+For **inline SVGs** (`<svg>...</svg>` blocks embedded in the markdown):
+1. Extract each SVG block.
+2. Generate a descriptive filename based on surrounding context (e.g., `architecture-diagram.svg`, `flow-chart.svg`).
+3. Save to `wiki/assets/<descriptive-name>.svg`.
+4. Replace the inline SVG block with a markdown image reference: `![description](../assets/<descriptive-name>.svg)`.
+
+#### Path Rewriting in Wiki Pages (Cập nhật đường dẫn)
+
+When writing wiki pages (source summary, entity, concept pages), **rewrite all image paths** to point to `wiki/assets/`:
+
+| Original reference in source | Rewritten reference in wiki page |
+|---|---|
+| `![arch](./images/arch.png)` | `![arch](../assets/arch.png)` |
+| `![flow](../diagrams/flow.svg)` | `![flow](../assets/flow.svg)` |
+| `![diagram](/absolute/path/to/img.png)` | `![diagram](../assets/img.png)` |
+| `<img src="./img.png">` | `![img](../assets/img.png)` |
+| `<svg>...</svg>` (inline) | `![description](../assets/descriptive-name.svg)` |
+| `![ext](https://example.com/img.png)` | `![ext](https://example.com/img.png)` *(unchanged)* |
+
+> **Note:** Use relative paths (`../assets/`) from the wiki page's directory to `wiki/assets/`. Adjust depth if the page is nested deeper.
+
+#### Rules (Quy tắc xử lý media)
+
+- **Không bao giờ bỏ sót ảnh/SVG:** Mọi image reference trong source PHẢI được bảo toàn trong wiki page output.
+- **Ảnh phục vụ nội dung:** Nếu ảnh chứa dữ liệu có cấu trúc (kiến trúc hệ thống, flowchart, schema, biểu đồ), mô tả nội dung ảnh bằng text trong phần phân tích (Phase 1b) **ngoài việc** giữ lại link ảnh.
+- **Alt text bắt buộc:** Mọi ảnh trong wiki page phải có alt text mô tả (`![Kiến trúc hệ thống X](../assets/arch.png)`), không để trống (`![](...)`) .
+- **Naming convention:** File ảnh trong `wiki/assets/` giữ nguyên tên gốc. Nếu tên gốc không rõ ràng (e.g., `image1.png`), đổi thành tên mô tả kebab-case.
+- **Broken image check:** Sau khi ghi wiki page, kiểm tra mọi image reference trỏ tới file thực tế tồn tại (tương tự broken wikilink check ở Phase 5).
+
+6. **Handling structured content (Bảo toàn nội dung có cấu trúc):** Scan và lập danh sách toàn bộ structured content blocks trong source. Các nội dung này PHẢI được bảo toàn nguyên vẹn trong wiki pages — **không được tóm tắt, lược bỏ, hay diễn giải lại**.
+
+#### Structured Content Inventory (Kiểm kê nội dung có cấu trúc)
+
+Scan source file và phân loại mỗi structured block tìm được:
+
+| Content type | Detection pattern | Ví dụ |
+|---|---|---|
+| **Code blocks** | ` ```language ... ``` ` hoặc indented 4 spaces | Code examples, config snippets, CLI commands |
+| **Inline code** | `` `code` `` | Tên hàm, biến, class, lệnh ngắn |
+| **Math formulas (LaTeX)** | `$$...$$` (block) hoặc `$...$` (inline), `\[...\]`, `\(...\)` | Công thức toán học, phương trình |
+| **Tables** | `\| ... \| ... \|` markdown tables | Bảng so sánh, bảng dữ liệu, ma trận |
+| **Mermaid diagrams** | ` ```mermaid ... ``` ` | Flowcharts, sequence diagrams, state diagrams |
+| **Blockquotes** | `> ...` lines (trích dẫn có ý nghĩa nội dung) | Trích dẫn quan trọng, định nghĩa chính thức |
+| **Ordered/numbered lists** | Multi-level numbered lists mô tả quy trình/thuật toán | Steps, algorithms, procedures |
+| **ASCII art / text diagrams** | Pre-formatted text blocks mô tả cấu trúc | Architecture layouts, tree structures |
+
+```bash
+# Count structured content blocks in source
+echo "=== Structured Content Inventory ==="
+echo "Code blocks: $(grep -c '^\`\`\`' "$SOURCE_FILE" | awk '{print int($1/2)}')"
+echo "Math blocks ($$): $(grep -c '^\$\$' "$SOURCE_FILE" | awk '{print int($1/2)}')"
+echo "Inline math ($): $(grep -oP '(?<!\$)\$(?!\$)[^$]+\$(?!\$)' "$SOURCE_FILE" | wc -l)"
+echo "Tables: $(grep -c '^|.*|.*|$' "$SOURCE_FILE")"
+echo "Mermaid blocks: $(grep -c '^\`\`\`mermaid' "$SOURCE_FILE")"
+echo "Blockquotes: $(grep -c '^>' "$SOURCE_FILE")"
+```
+
+#### Preservation Rules (Quy tắc bảo toàn)
+
+**🔒 Quy tắc tối thượng: Không bao giờ mất nội dung structured.**
+
+**Code blocks & examples:**
+- Copy **nguyên vẹn** vào wiki page phù hợp — giữ đúng ngôn ngữ (` ```python `, ` ```java `, ...), indentation, comments.
+- Đặt code trong section phù hợp nhất: `## Examples (Ví dụ)` cho concept pages, `## Key Facts (Thông tin chính)` cho entity pages, hoặc inline trong phần nội dung liên quan.
+- Nếu code block **minh họa một concept cụ thể** → đặt trong concept page tương ứng.
+- Nếu code block **demo một entity/tool** → đặt trong entity page tương ứng.
+- Nếu code block **chung cho toàn bộ tài liệu** → đặt trong source summary page.
+- **Thêm ngữ cảnh tiếng Việt** trước mỗi code block để giải thích mục đích:
+  ```markdown
+  Ví dụ triển khai Attention mechanism bằng PyTorch:
+
+  ```python
+  import torch
+  ...
+  ```
+  ```
+
+**Math formulas (Công thức toán học):**
+- Copy **nguyên vẹn** cả block math (`$$...$$`) và inline math (`$...$`).
+- Giữ đúng cú pháp LaTeX/KaTeX gốc — không chuyển đổi format.
+- **Thêm giải thích tiếng Việt** sau mỗi công thức quan trọng:
+  ```markdown
+  $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+
+  Trong đó: $Q$ là Query, $K$ là Key, $V$ là Value, $d_k$ là chiều (dimension) của Key vector.
+  ```
+- Nếu source dùng dạng khác (HTML MathML, image-based math), chuyển sang LaTeX `$$` nếu có thể, hoặc giữ nguyên dạng gốc.
+
+**Tables (Bảng biểu):**
+- Copy **nguyên vẹn** markdown tables. Giữ đúng alignment (`:---`, `:---:`, `---:`).
+- Nếu table > 8 cột hoặc > 20 hàng, giữ nguyên nhưng thêm caption tiếng Việt phía trên.
+- Nếu source dùng HTML `<table>`, chuyển sang markdown table khi có thể. Nếu table quá phức tạp (merged cells, colspan), giữ nguyên HTML.
+
+**Mermaid diagrams:**
+- Copy **nguyên vẹn** ` ```mermaid ` blocks.
+- Thêm caption tiếng Việt phía trên diagram:
+  ```markdown
+  Quy trình xử lý request trong hệ thống:
+
+  ```mermaid
+  flowchart TD
+    A[Request] --> B{Auth?}
+    ...
+  ```
+  ```
+
+**Blockquotes (Trích dẫn):**
+- Phân loại: **Trích dẫn nội dung** (chứa kiến thức/định nghĩa) vs **Trích dẫn tu từ** (chỉ mang tính decorative).
+- Trích dẫn nội dung → bảo toàn nguyên vẹn trong wiki page + thêm attribution nếu có.
+- Trích dẫn tu từ → có thể lược bỏ nếu không mang kiến thức mới.
+
+**ASCII art / Text diagrams:**
+- Wrap trong ` ``` ` code block (không language tag) để bảo toàn formatting.
+- Thêm caption tiếng Việt giải thích nội dung diagram.
+
+#### Placement Strategy (Chiến lược phân bổ nội dung)
+
+Khi tạo wiki pages, phân bổ structured content theo quy tắc:
+
+| Structured content | Target page | Target section |
+|---|---|---|
+| Code example minh họa concept X | `wiki/concepts/x.md` | `## Examples (Ví dụ)` |
+| Code example demo entity/tool Y | `wiki/entities/y.md` | `## Key Facts (Thông tin chính)` hoặc tạo `## Code Examples (Ví dụ mã nguồn)` |
+| Math formula định nghĩa concept X | `wiki/concepts/x.md` | `## Definition (Định nghĩa)` hoặc `## Key Points (Điểm chính)` |
+| Table so sánh nhiều entities | `wiki/sources/source.md` | `## Key Claims (Các khẳng định chính)` |
+| Table thuộc tính của 1 entity | `wiki/entities/entity.md` | `## Key Facts (Thông tin chính)` |
+| Mermaid diagram quy trình concept X | `wiki/concepts/x.md` | `## Definition (Định nghĩa)` hoặc `## Key Points (Điểm chính)` |
+| General-purpose code/math/diagram | `wiki/sources/source.md` | Section phù hợp nhất |
+
+> **Quy tắc nhân bản:** Nếu một code block/formula phục vụ nhiều pages, đặt bản đầy đủ ở page chính (most relevant) và tham chiếu từ các pages khác: `Xem ví dụ code tại [[concept-slug#examples]]`.
 
 ### Phase 1b: Semantic Analysis & Entity Extraction
 
@@ -134,6 +320,7 @@ Extract core information with a **controlled granularity policy** — create sta
 - **Category determination:** Xác định lĩnh vực kiến thức chính (category) của tài liệu dựa trên nội dung và chủ đề. Giá trị category là chuỗi kebab-case, ví dụ: `ai`, `ai-agent`, `system-design`, `java-programming`, `finance`, `economics`, `data-analyst`, `devops`. Nếu tài liệu thuộc nhiều lĩnh vực, chọn lĩnh vực **chính** (primary domain).
 - **Questions & Gaps:** Open issues, ambiguities, or unanswered points raised in the source.
 - **Potential Wikilinks:** Map extracted terms to existing pages in the wiki.
+- **Structured Content Mapping:** Cho mỗi structured block đã kiểm kê ở Phase 1a step 6, xác định target page và section cụ thể nơi nó sẽ được đặt. Đảm bảo mọi code block, math formula, table, mermaid diagram đều có "chủ sở hữu" — không block nào bị bỏ lại.
 
 #### 🔒 Granularity Rules (Quy tắc Tách / Gộp Knowledge)
 
@@ -200,6 +387,17 @@ Present the extraction summary to the user, **including granularity decisions**:
 - **Concepts phát hiện:**
   - `[STANDALONE]` concept-name — Lý do: standalone definition + ≥2 key points → full page
   - `[INLINE in parent-concept] + stub` concept-name — Lý do: sub-step / visualization → stub page + inline in parent
+- **Media assets (Ảnh/SVG):**
+  - 🖼️ `N` ảnh/SVG tìm thấy → sẽ copy vào `wiki/assets/`
+  - ✅ Tìm thấy: `image1.png`, `diagram.svg`, ...
+  - ⚠️ Không tìm thấy file: `missing-image.png` (path không tồn tại)
+  - 🔗 URL references (giữ nguyên): `https://...`
+- **Structured content (Nội dung có cấu trúc):**
+  - 📝 Code blocks: `N` blocks (Python: X, Java: Y, ...) → sẽ đặt tại [target pages]
+  - 📐 Math formulas: `N` block + `M` inline → sẽ đặt tại [target pages]
+  - 📊 Tables: `N` bảng → sẽ đặt tại [target pages]
+  - 📈 Mermaid diagrams: `N` diagrams → sẽ đặt tại [target pages]
+  - 💬 Blockquotes: `N` trích dẫn nội dung (bỏ qua `M` trích dẫn tu từ)
 - **Cơ hội liên kết (Wikilinks):** [Danh sách]
 ```
 Ask:
@@ -241,10 +439,14 @@ Structure: Consult `references/page-templates.md`. Must include:
 - Frontmatter with `title: "..."`, `type: sources`, `category: <category-value>`, `tags: [...]`, `sources: [filename]`, `created`, `updated`
 - `# Title (Tiêu đề)`
 - `## Summary (Tóm tắt)`
-- `## Key Claims (Các khẳng định chính)`
+- `## Key Claims (Các khẳng định chính)` — bao gồm tables/diagrams liên quan nếu có
+- `## Key Formulas (Công thức chính)` — *tùy chọn, chỉ khi source chứa math formulas*
+- `## Code Examples (Ví dụ mã nguồn)` — *tùy chọn, chỉ khi source chứa code blocks chung*
 - `## Entities Mentioned (Thực thể được nhắc đến)`
 - `## Concepts Covered (Khái niệm được đề cập)`
 - `## Questions (Câu hỏi mở)`
+
+> **Structured content rule:** Mọi code block, math formula, table, mermaid diagram từ source mà không thuộc riêng entity/concept nào PHẢI được đặt trong source summary page. Không để mất.
 
 ---
 
@@ -254,8 +456,8 @@ For each entity/concept extracted in Phase 1b, create or update pages based on c
 
 **`[STANDALONE]` items → Full page:**
 - Write/update in `wiki/entities/` or `wiki/concepts/` with complete content.
-- **Entity pages:** Must include `## Context (Ngữ cảnh)` describing the role/system context in addition to `Overview` and `Key Facts`.
-- **Concept pages:** Must include `## Examples (Ví dụ)` providing concrete illustrations in addition to `Definition` and `Key Points`.
+- **Entity pages:** Must include `## Context (Ngữ cảnh)` describing the role/system context in addition to `Overview` and `Key Facts`. Thêm `## Code Examples (Ví dụ mã nguồn)` nếu source chứa code examples liên quan đến entity.
+- **Concept pages:** Must include `## Examples (Ví dụ)` providing concrete illustrations in addition to `Definition` and `Key Points`. Đặt math formulas trong `## Definition (Định nghĩa)`, code examples trong `## Examples (Ví dụ)`, diagrams/tables trong section phù hợp nhất.
 
 **`[INLINE]` items → Stub page + inline content in parent:**
 1. **Create stub page** in `wiki/entities/` or `wiki/concepts/` using the stub template (see `references/page-templates.md`):
@@ -306,6 +508,22 @@ done
 ```
 Resolve any broken links immediately by generating the stub page or fixing the slug.
 
+Verify all image references resolve to actual files:
+```bash
+# Check image references in newly created/updated wiki pages
+for page in "$PROJECT_PATH/wiki/sources/new-page.md" "$PROJECT_PATH/wiki/entities/entity.md"; do
+  grep -oP '!\[[^\]]*\]\(\K[^)]+' "$page" 2>/dev/null | while read img_ref; do
+    # Skip URL references
+    echo "$img_ref" | grep -qP '^https?://' && continue
+    # Resolve relative path from the page's directory
+    PAGE_DIR=$(dirname "$page")
+    IMG_PATH=$(realpath -m "$PAGE_DIR/$img_ref" 2>/dev/null || echo "$img_ref")
+    [ ! -f "$IMG_PATH" ] && echo "BROKEN IMAGE: $img_ref (in $page)"
+  done
+done
+```
+Resolve broken image links by copying the missing asset to `wiki/assets/` or fixing the path.
+
 ---
 
 ### Phase 6: Update Index, Log & Hash Registry
@@ -327,7 +545,8 @@ Resolve any broken links immediately by generating the stub page or fixing the s
      "archived_path": "raw/sources/source-file.md",
      "ingest_date": "YYYY-MM-DD",
      "pages_created": ["source-slug", "entity-1"],
-     "pages_updated": ["concept-2"]
+     "pages_updated": ["concept-2"],
+     "assets_copied": ["arch-diagram.png", "flow.svg"]
    }
    ```
 
@@ -337,8 +556,11 @@ Resolve any broken links immediately by generating the stub page or fixing the s
 
 Present a clean summary to the user:
 - Pages created & updated (with clickable wikilinks)
+- Assets copied to `wiki/assets/` (list filenames)
+- Missing assets not found on disk (⚠️ warnings)
+- Broken image references verified/fixed
 - Contradictions recorded (if any)
-- Broken links verified/fixed
+- Broken wikilinks verified/fixed
 - **Cross-Skill Next Steps:**
   - 🔍 **wiki-lint:** Gợi ý chạy kiểm tra sức khỏe nếu đã ingest ≥ 10 tài liệu kể từ lần lint trước.
   - 🔬 **wiki-research:** Gợi ý đào sâu hoặc tạo synthesis page nếu Phase 4.5 phát hiện cơ hội tổng hợp.
@@ -352,3 +574,5 @@ Present a clean summary to the user:
 - **Bilingual Headers & Terms:** Các tiêu đề lớn và thuật ngữ kỹ thuật sử dụng định dạng song ngữ: `## Summary (Tóm tắt)`, `Cache (Bộ nhớ đệm)`.
 - **Tên biến, mã nguồn, định danh API:** Giữ nguyên dạng gốc tiếng Anh.
 - **File gốc trong raw/sources:** Giữ nguyên vẹn, không bao giờ tự ý xóa hoặc di chuyển file nguồn gốc.
+- **Bảo toàn structured content:** Code blocks, math formulas (`$$`, `$`), tables, mermaid diagrams, blockquotes có nội dung kiến thức — PHẢI được giữ nguyên vẹn trong wiki pages. Không tóm tắt code thành prose, không lược bỏ công thức, không bỏ table. Thêm giải thích tiếng Việt bên cạnh nhưng không thay thế nội dung gốc.
+- **Ảnh và SVG:** Mọi image reference từ source PHẢI được bảo toàn. Copy ảnh local vào `wiki/assets/`, rewrite paths. Không bao giờ bỏ sót ảnh.

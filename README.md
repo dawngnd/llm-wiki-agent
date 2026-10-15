@@ -25,6 +25,7 @@ Plugin này cung cấp bộ skills để coding agent có thể duy trì wiki kn
   ```
   project/
   ├── wiki/
+  │   ├── assets/       # Ảnh, SVG, diagrams
   │   ├── sources/      # Tóm tắt nguồn
   │   ├── entities/     # Người, tổ chức, sản phẩm
   │   ├── concepts/     # Ý tưởng, framework, pattern

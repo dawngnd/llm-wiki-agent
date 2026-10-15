@@ -32,6 +32,26 @@ Tóm tắt cấu trúc của nội dung tài liệu nguồn.
 - Khẳng định 1
 - Khẳng định 2
 
+<!-- Nếu source có tables/formulas/diagrams liên quan đến claims chính, đặt ở đây -->
+
+## Key Formulas (Công thức chính)
+
+<!-- Section tùy chọn — chỉ tạo nếu source chứa math formulas -->
+
+$$\text{formula}$$
+
+Giải thích ý nghĩa công thức bằng tiếng Việt.
+
+## Code Examples (Ví dụ mã nguồn)
+
+<!-- Section tùy chọn — chỉ tạo nếu source chứa code blocks không thuộc riêng entity/concept nào -->
+
+```language
+// code block nguyên vẹn từ source
+```
+
+Giải thích ngữ cảnh code bằng tiếng Việt.
+
 ## Entities Mentioned (Thực thể được nhắc đến)
 
 - [[entity-name]] — ngữ cảnh tóm tắt
@@ -72,10 +92,22 @@ Mô tả thực thể.
 
 Mô tả bối cảnh entity xuất hiện, vai trò trong hệ thống hoặc mối liên kết nghiệp vụ.
 
+<!-- Nếu có architecture diagram, mermaid, đặt ở đây -->
+
 ## Key Facts (Thông tin chính)
 
 - Fact 1 (from [[source-1]])
 - Fact 2 (from [[source-2]])
+
+<!-- Nếu có bảng thông số, config snippets, đặt inline ở đây -->
+
+## Code Examples (Ví dụ mã nguồn)
+
+<!-- Section tùy chọn — chỉ tạo nếu source chứa code examples liên quan đến entity -->
+
+```language
+// code block nguyên vẹn từ source
+```
 
 ## Related (Liên quan)
 
@@ -106,14 +138,30 @@ updated: YYYY-MM-DD
 
 Định nghĩa rõ ràng.
 
+<!-- Nếu concept có công thức toán học định nghĩa, đặt ở đây -->
+
+$$\text{formula}$$
+
+Giải thích ý nghĩa từng thành phần trong công thức.
+
 ## Key Points (Điểm chính)
 
 - Điểm 1
 - Điểm 2
 
+<!-- Nếu có bảng so sánh, flowchart/mermaid, đặt ở đây -->
+
 ## Examples (Ví dụ)
 
-- Ví dụ minh họa thực tế cho khái niệm này.
+Ví dụ minh họa thực tế cho khái niệm này.
+
+<!-- Nếu source có code examples, đặt nguyên vẹn ở đây -->
+
+Ví dụ triển khai bằng [ngôn ngữ]:
+
+```language
+// code block nguyên vẹn từ source
+```
 
 ## Related (Liên quan)
 
