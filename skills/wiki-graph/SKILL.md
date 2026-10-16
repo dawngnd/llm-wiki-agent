@@ -230,9 +230,9 @@ Build this matrix by mapping each page to its category (the subdirectory it live
 - Synthesis → everything should be high (synthesis pages are meant to integrate)
 - Any zero cell in the matrix suggests a disconnected category pair worth investigating
 
-### 8.2 By Knowledge Domain (Category)
+### 8.2 By Knowledge Domain (Category & Domain)
 
-Group pages by their frontmatter `category` field and count edges between domain pairs:
+Group pages by their frontmatter `category` and `domain` fields and count edges between pairs:
 
 ```bash
 # Extract category per page
@@ -243,18 +243,38 @@ for f in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ \
   [ -n "$cat_val" ] && echo "$page $cat_val"
 done > /tmp/wiki-page-categories.txt
 
-# Cross-reference with edge list to build domain-pair matrix
+# Extract domain per page
+for f in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ \
+  -name "*.md" 2>/dev/null); do
+  page=$(basename "$f" .md)
+  dom_val=$(grep "^domain:" "$f" | head -1 | awk '{print $2}')
+  [ -n "$dom_val" ] && echo "$page $dom_val"
+done > /tmp/wiki-page-domains.txt
+
+# Cross-reference with edge list to build category-pair matrix
 while IFS=' -> ' read src tgt; do
   src_cat=$(grep "^$src " /tmp/wiki-page-categories.txt | awk '{print $2}')
   tgt_cat=$(grep "^$tgt " /tmp/wiki-page-categories.txt | awk '{print $2}')
   [ -n "$src_cat" ] && [ -n "$tgt_cat" ] && echo "$src_cat -> $tgt_cat"
 done < /tmp/wiki-edges.txt | sort | uniq -c | sort -rn
+
+# Cross-reference with edge list to build domain-pair matrix
+echo -e "\n=== Cross-Domain Links ==="
+while IFS=' -> ' read src tgt; do
+  src_dom=$(grep "^$src " /tmp/wiki-page-domains.txt | awk '{print $2}')
+  tgt_dom=$(grep "^$tgt " /tmp/wiki-page-domains.txt | awk '{print $2}')
+  [ -n "$src_dom" ] && [ -n "$tgt_dom" ] && echo "$src_dom -> $tgt_dom"
+done < /tmp/wiki-edges.txt | sort | uniq -c | sort -rn
 ```
 
-**Interpretation:**
-- High cross-domain links (e.g., `ai -> system-design`) indicate knowledge areas that naturally overlap.
+**Interpretation (by category):**
+- High cross-category links indicate structural diversity (different page types connecting).
+- Low cross-category links suggest siloed page types.
+
+**Interpretation (by domain):**
+- High cross-domain links (e.g., `ai-agent -> system-design`) indicate knowledge areas that naturally overlap.
 - Isolated domains with zero outbound links to other domains suggest siloed knowledge — investigate whether cross-references are missing.
-- Domains with many pages but low link density may need internal structuring
+- Domains with many pages but low link density may need internal structuring.
 
 ## 9. Visualization Output
 

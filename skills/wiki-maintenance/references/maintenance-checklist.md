@@ -13,6 +13,7 @@
 - [ ] Graph connectivity review (find clusters and orphans)
 - [ ] Language consistency check (Vietnamese with bilingual headers)
 - [ ] Frontmatter validation on all pages
+- [ ] Domain field validation — ensure all pages have valid `domain` field (kebab-case)
 
 ## After Every 10 Ingests
 - [ ] Run wiki-lint skill

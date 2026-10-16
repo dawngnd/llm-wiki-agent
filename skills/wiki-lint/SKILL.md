@@ -234,6 +234,7 @@ Also flag:
 Verify every page has valid YAML frontmatter:
 - `type` field exists and matches the directory (`sources`, `entities`, `concepts`, `synthesis`)
 - `category` field exists and is a valid kebab-case string (e.g., `ai`, `system-design`, `java-programming`)
+- `domain` field exists and is a valid kebab-case string (e.g., `ai-agent`, `system-design`, `web-development`)
 - `created` and `updated` dates present and in `YYYY-MM-DD` format
 - `tags` array present
 - `sources` array present on entity/concept pages
@@ -261,6 +262,13 @@ for f in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ -nam
   echo "$cat_val" | grep -qP '^[a-z0-9]+(-[a-z0-9]+)*$' || echo "INVALID CATEGORY FORMAT: $f (got $cat_val, expected kebab-case)"
 done
 
+# Check domain field exists and is valid kebab-case
+for f in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ -name "*.md" 2>/dev/null); do
+  dom_val=$(grep "^domain:" "$f" | head -1 | awk '{print $2}')
+  [ -z "$dom_val" ] && echo "MISSING DOMAIN: $f" && continue
+  echo "$dom_val" | grep -qP '^[a-z0-9]+(-[a-z0-9]+)*$' || echo "INVALID DOMAIN FORMAT: $f (got $dom_val, expected kebab-case)"
+done
+
 # Check for missing dates
 for f in $(find wiki/ -path "wiki/log.md" -prune -o -path "wiki/index.md" -prune -o -name "*.md" -print); do
   grep -q "^created:" "$f" || echo "MISSING created: $f"
@@ -268,7 +276,7 @@ for f in $(find wiki/ -path "wiki/log.md" -prune -o -path "wiki/index.md" -prune
 done
 ```
 
-**Auto-fix:** Add missing `type:` field based on directory. Add missing `category:` field with value inferred from page `tags` and content. Add `created:` / `updated:` using file modification time as fallback. Add empty `tags: []` and `sources: []` arrays where missing.
+**Auto-fix:** Add missing `type:` field based on directory. Add missing `category:` field with value inferred from page `tags` and content. Add missing `domain:` field with value inferred from page `tags`, `category`, and content keywords. Add `created:` / `updated:` using file modification time as fallback. Add empty `tags: []` and `sources: []` arrays where missing.
 
 ### Check 10: Language Consistency (WARNING) — Severity: 3 pts each
 

@@ -69,6 +69,21 @@ for f in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ \
   -name "*.md" 2>/dev/null); do
   grep "^category:" "$f" | awk '{print $2}'
 done | sort | uniq -c | sort -rn
+
+# Count pages per domain
+echo -e "\n=== By Domain ==="
+for f in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ \
+  -name "*.md" 2>/dev/null); do
+  grep "^domain:" "$f" | awk '{print $2}'
+done | sort | uniq -c | sort -rn
+
+# Pages missing domain field
+MISSING_DOMAIN=0
+for f in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ \
+  -name "*.md" 2>/dev/null); do
+  grep -q "^domain:" "$f" || MISSING_DOMAIN=$((MISSING_DOMAIN + 1))
+done
+echo "Pages missing domain: $MISSING_DOMAIN"
 ```
 
 Calculate the percentage distribution across directories:
@@ -280,6 +295,13 @@ Format all collected metrics into a clean, scannable dashboard. Use emoji indica
     system-design:  N pages
     finance:        N pages
     ...
+
+🏷️ By Domain
+    ai-agent:       N pages
+    system-design:  N pages
+    web-development: N pages
+    ...
+    ⚠️ missing domain: N pages
 
 📦 Sources
    raw available:  N
