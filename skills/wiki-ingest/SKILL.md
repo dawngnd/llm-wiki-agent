@@ -318,6 +318,9 @@ Extract core information with a **controlled granularity policy** — create sta
 - **Entities:** All people, organizations, tools, products, APIs, services mentioned. Apply **Entity Granularity Rules** (see below) to decide standalone page vs inline mention.
 - **Concepts:** All ideas, frameworks, architectural patterns, theories, workflows. Apply **Concept Granularity Rules** (see below) to decide standalone page vs inline mention.
 - **Category determination:** Xác định lĩnh vực kiến thức chính (category) của tài liệu dựa trên nội dung và chủ đề. Giá trị category là chuỗi kebab-case, ví dụ: `ai`, `ai-agent`, `system-design`, `java-programming`, `finance`, `economics`, `data-analyst`, `devops`. Nếu tài liệu thuộc nhiều lĩnh vực, chọn lĩnh vực **chính** (primary domain).
+- **Domain determination:** Xác định domain (lĩnh vực tri thức) của tài liệu. Giá trị `domain` là chuỗi kebab-case, ví dụ: `ai-agent`, `system-design`, `java-programming`, `finance`, `data-engineering`, `devops`, `web-development`. Domain khác với category: category phân loại **loại nội dung** (sources, entities, concepts), còn domain phân loại **lĩnh vực tri thức**. Mỗi page chỉ có **một domain duy nhất**.
+  - **Nếu user đã chỉ định domain** khi gọi ingest (VD: `ingest /path/to/file.md domain=ai-agent`) → sử dụng domain đó.
+  - **Nếu user KHÔNG chỉ định domain** → agent PHẢI hỏi user trước khi quyết định. Đề xuất domain dựa trên nội dung phân tích, nhưng chờ user xác nhận.
 - **Questions & Gaps:** Open issues, ambiguities, or unanswered points raised in the source.
 - **Potential Wikilinks:** Map extracted terms to existing pages in the wiki.
 - **Structured Content Mapping:** Cho mỗi structured block đã kiểm kê ở Phase 1a step 6, xác định target page và section cụ thể nơi nó sẽ được đặt. Đảm bảo mọi code block, math formula, table, mermaid diagram đều có "chủ sở hữu" — không block nào bị bỏ lại.
@@ -380,6 +383,7 @@ Present the extraction summary to the user, **including granularity decisions**:
 - **Loại tài liệu:** [Type]
 - **Ngôn ngữ gốc:** [Lang]
 - **Category đề xuất:** [category-value] — Lý do: [giải thích ngắn]
+- **Domain đề xuất:** `[domain-value]` — Lý do: [giải thích ngắn]. *(Nếu user chưa chỉ định, cần xác nhận)*
 - **Key Takeaways:** [3-5 điểm]
 - **Entities phát hiện:**
   - `[STANDALONE]` entity-name — Lý do: ≥3 facts / primary subject → full page
@@ -401,7 +405,7 @@ Present the extraction summary to the user, **including granularity decisions**:
 - **Cơ hội liên kết (Wikilinks):** [Danh sách]
 ```
 Ask:
-> "Bạn có muốn điều chỉnh quyết định STANDALONE/INLINE+stub, thêm/bớt entities/concepts, hoặc bỏ qua phần nào trước khi ghi vào wiki không?"
+> "Bạn có muốn điều chỉnh domain, quyết định STANDALONE/INLINE+stub, thêm/bớt entities/concepts, hoặc bỏ qua phần nào trước khi ghi vào wiki không?"
 
 **Wait for confirmation before writing any files.**
 
@@ -436,7 +440,7 @@ Naming rules:
 - If colliding with a concept/entity name, append `-source` (e.g. `api-gateway-source.md`).
 
 Structure: Consult `references/page-templates.md`. Must include:
-- Frontmatter with `title: "..."`, `type: sources`, `category: <category-value>`, `tags: [...]`, `sources: [filename]`, `created`, `updated`
+- Frontmatter with `title: "..."`, `type: sources`, `domain: <domain-value>`, `category: <category-value>`, `tags: [...]`, `sources: [filename]`, `created`, `updated`
 - `# Title (Tiêu đề)`
 - `## Summary (Tóm tắt)`
 - `## Key Claims (Các khẳng định chính)` — bao gồm tables/diagrams liên quan nếu có
@@ -471,9 +475,10 @@ For each entity/concept extracted in Phase 1b, create or update pages based on c
 **Update & Contradiction Strategy:**
 1. Append new source to `sources:` array in frontmatter.
 2. Verify `category` field exists; if missing, add based on page content and current source's category.
-3. Add new facts with citations `(from [[source-slug]])`. Never delete existing valid facts.
-4. **Stub → Full upgrade:** If an existing stub page receives ≥3 new facts from the current source, upgrade it to a full page and remove `stub: true` from frontmatter.
-5. **Contradictions:** Never silently overwrite. When a claim conflicts with existing knowledge, append to or create:
+3. Verify `domain` field exists; if missing, add based on current source's domain.
+4. Add new facts with citations `(from [[source-slug]])`. Never delete existing valid facts.
+5. **Stub → Full upgrade:** If an existing stub page receives ≥3 new facts from the current source, upgrade it to a full page and remove `stub: true` from frontmatter.
+6. **Contradictions:** Never silently overwrite. When a claim conflicts with existing knowledge, append to or create:
    ```markdown
    ## Contradictions (Mâu thuẫn)
    - **Chủ đề:** [[source-a]] nêu rằng X, nhưng [[source-b]] nêu rằng Y. Cần xác minh thêm.
@@ -576,3 +581,4 @@ Present a clean summary to the user:
 - **File gốc trong raw/sources:** Giữ nguyên vẹn, không bao giờ tự ý xóa hoặc di chuyển file nguồn gốc.
 - **Bảo toàn structured content:** Code blocks, math formulas (`$$`, `$`), tables, mermaid diagrams, blockquotes có nội dung kiến thức — PHẢI được giữ nguyên vẹn trong wiki pages. Không tóm tắt code thành prose, không lược bỏ công thức, không bỏ table. Thêm giải thích tiếng Việt bên cạnh nhưng không thay thế nội dung gốc.
 - **Ảnh và SVG:** Mọi image reference từ source PHẢI được bảo toàn. Copy ảnh local vào `wiki/assets/`, rewrite paths. Không bao giờ bỏ sót ảnh.
+- **Domain bắt buộc:** Mọi page PHẢI có field `domain` trong frontmatter. Giá trị là kebab-case string (VD: `ai-agent`, `system-design`). Khi ingest, nếu user không cung cấp domain, PHẢI hỏi user trước khi ghi page.

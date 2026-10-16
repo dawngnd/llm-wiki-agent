@@ -175,6 +175,7 @@ Validate YAML frontmatter on every page and auto-fix what is safe to fix:
 |-------|------|---------------|
 | `type` | Must match directory: `sources`, `entities`, `concepts`, `synthesis` | Yes |
 | `category` | Must exist, valid kebab-case string (e.g., `ai`, `system-design`) | Semi — infer from `tags` and content |
+| `domain` | Must exist, valid kebab-case string (e.g., `ai-agent`, `system-design`) | Semi — infer from `category`, `tags`, content, and related sources |
 | `created` | Must exist, format `YYYY-MM-DD` | Yes — use file modification date |
 | `updated` | Must exist, format `YYYY-MM-DD` | Yes — use today's date |
 | `sources` | Array, required on entity/concept pages | No — needs context |
@@ -194,6 +195,15 @@ done
 ```
 
 For tag format issues, convert inline strings like `tags: "open-spec, urd"` to proper YAML arrays. Flag missing `sources` arrays on entity/concept pages for user input — these require understanding what source material the page was derived from.
+
+For missing `domain` field, the agent determines the domain autonomously based on:
+1. **Page's `category` field** — often directly maps to a domain (e.g., `category: ai` → `domain: ai`).
+2. **Page's `tags` array** — domain-specific tags provide strong signals (e.g., tags `[transformer, attention]` → `domain: ai-agent`).
+3. **Page's content keywords** — scan body text for domain indicators.
+4. **Related source pages** — check `sources:` array entries and inherit their domain if consistent.
+5. **Neighboring pages** — check pages linked via `[[wikilinks]]` for domain consensus.
+
+The agent decides the domain value **without asking the user** during maintenance, since these are auto-fix operations on pages that already exist. Use kebab-case format: `ai-agent`, `system-design`, `java-programming`, `finance`, `data-engineering`, `devops`, `web-development`.
 
 ## Auto-Fix: Cross-Reference Addition / Thêm Liên Kết Chéo
 
@@ -273,7 +283,7 @@ After completing all fixes, generate a structured summary and append it to `wiki
 - Fixed N broken wikilinks (N title-case, N pascal-case, N extension removals)
 - Added N missing pages to wiki/index.md
 - Removed N stale entries from wiki/index.md
-- Patched frontmatter on N pages (N type fixes, N category additions, N date additions, N tag format fixes)
+- Patched frontmatter on N pages (N type fixes, N category additions, N domain additions, N date additions, N tag format fixes)
 - Added N cross-reference wikilinks
 
 ### Manual fixes applied

@@ -8,6 +8,7 @@ Location: `wiki/sources/`
 ---
 title: "Tiêu đề tài liệu nguồn"
 type: sources
+domain: domain-value
 category: category-value
 tags: [relevant, tags]
 sources: [original-filename.md]
@@ -73,6 +74,7 @@ Location: `wiki/entities/`
 ---
 title: "Tên thực thể"
 type: entities
+domain: domain-value
 category: category-value
 tags: [relevant, tags]
 sources: [source-1.md, source-2.md]
@@ -123,6 +125,7 @@ Location: `wiki/concepts/`
 ---
 title: "Tên khái niệm"
 type: concepts
+domain: domain-value
 category: category-value
 tags: [relevant, tags]
 sources: [source-1.md, source-2.md]
@@ -178,6 +181,7 @@ Used when an entity is classified as `[INLINE]` but still needs its own page.
 ---
 title: "Tên thực thể"
 type: entities
+domain: domain-value
 category: category-value
 stub: true
 tags: [relevant, tags]
@@ -209,6 +213,7 @@ Used when a concept is classified as `[INLINE]` but still needs its own page.
 ---
 title: "Tên khái niệm"
 type: concepts
+domain: domain-value
 category: category-value
 stub: true
 tags: [relevant, tags]
@@ -239,6 +244,7 @@ Location: `wiki/synthesis/`
 ---
 title: "Tiêu đề phân tích"
 type: synthesis
+domain: domain-value
 category: category-value
 tags: [relevant, tags]
 sources: [page-1.md, page-2.md]

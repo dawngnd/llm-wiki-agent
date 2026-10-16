@@ -137,12 +137,12 @@ Classify each subtopic into one of four categories:
 **Create a coverage matrix:**
 
 ```markdown
-| Subtopic | Category | Status | Wiki Page | Notes |
-|----------|----------|--------|-----------|-------|
-| Core architecture | system-design | Covered | [[service-architecture]] | Comprehensive |
-| Caching strategy | system-design | Shallow | mentioned in [[service-architecture]] | No dedicated page |
-| Performance metrics | system-design | Missing | — | Expected but absent |
-| Legacy migration | system-design | Stale | [[legacy-migration-source]] | Updated 2023-06, likely outdated |
+| Subtopic | Domain | Category | Status | Wiki Page | Notes |
+|----------|--------|----------|--------|-----------|-------|
+| Core architecture | system-design | system-design | Covered | [[service-architecture]] | Comprehensive |
+| Caching strategy | system-design | system-design | Shallow | mentioned in [[service-architecture]] | No dedicated page |
+| Performance metrics | system-design | system-design | Missing | — | Expected but absent |
+| Legacy migration | system-design | system-design | Stale | [[legacy-migration-source]] | Updated 2023-06, likely outdated |
 ```
 
 This matrix becomes the actionable output of the research — it tells the user exactly where to invest effort next.
@@ -207,14 +207,14 @@ Present this report to the user. All claims must be cited with `[[wikilinks]]`. 
 
 After presenting the synthesis report, offer a decision tree:
 
-- **Save as synthesis page:** Write the report to `wiki/synthesis/research-[topic].md` with proper frontmatter (`type: synthesis`, `category`, `tags`, `sources` listing all cited pages, `created`/`updated` dates). Add an entry to `wiki/index.md` under the Synthesis section. Append to `wiki/log.md`:
+- **Save as synthesis page:** Write the report to `wiki/synthesis/research-[topic].md` with proper frontmatter (`type: synthesis`, `domain: <inferred-domain>`, `category`, `tags`, `sources` listing all cited pages, `created`/`updated` dates). The agent determines `domain` autonomously by analyzing the domains of cited source pages — use the most frequent domain among cited pages, or the domain most relevant to the research topic. Add an entry to `wiki/index.md` under the Synthesis section. Append to `wiki/log.md`:
   ```markdown
   ## [YYYY-MM-DD] research | Topic Name
   Deep research on [topic]. Read N pages, found M connections, identified K gaps.
   Saved as [[research-topic]]. Contradictions: [count]. Sources to ingest: [count].
   ```
 - **Ingest suggested sources:** Hand off to `wiki-ingest` skill for each recommended raw source.
-- **Create missing pages:** For each gap marked "Missing," create a stub page in the appropriate directory with frontmatter and a placeholder body.
+- **Create missing pages:** For each gap marked "Missing," create a stub page in the appropriate directory with frontmatter (including `domain` inferred from the research topic and cited sources) and a placeholder body.
 - **Add cross-references:** For each suggested cross-link from graph exploration, add `[[wikilinks]]` to the relevant pages.
 
 Confirm with the user before executing any write operation.

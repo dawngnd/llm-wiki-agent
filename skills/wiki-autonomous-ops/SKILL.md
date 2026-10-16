@@ -86,7 +86,7 @@ Process up to **5 unprocessed sources** per cycle. For each source file, execute
 1. Read the entire source file content.
 2. Analyze content: extract key takeaways, entities (people, orgs, products), concepts (ideas, frameworks, patterns), and potential wikilinks.
 3. Search existing wiki pages for related content using `grep -rl "term" wiki/ --include="*.md"` to decide whether to update or create pages.
-4. Create a source summary page in `wiki/sources/` with proper frontmatter (`type: sources`, `category: <inferred-from-content>`, tags: `open-spec` for base_knowledge sources, `urd` for raw sources).
+4. Create a source summary page in `wiki/sources/` with proper frontmatter (`type: sources`, `domain: <inferred-from-content>`, `category: <inferred-from-content>`, tags: `open-spec` for base_knowledge sources, `urd` for raw sources).
 5. Create or update entity pages in `wiki/entities/` and concept pages in `wiki/concepts/`. Always prefer **updating** an existing page over creating a new one.
 6. Add `[[wikilinks]]` between all related pages. Format: `[[kebab-case-name]]` — no `.md` extension.
 7. Add entries to `wiki/index.md` under the correct category for each new page.
@@ -113,6 +113,7 @@ Run the 10-point health check from `wiki-lint` logic. Categorize each check as a
 - **Frontmatter type mismatches** — correct `type:` field to match directory name.
 - **Missing dates** — add `created:` using file modification date, `updated:` using today's date.
 - **Missing category** — infer `category:` from page `tags` and content keywords.
+- **Missing domain** — infer `domain:` from page `category`, `tags`, content keywords, and related sources.
 
 **Report-only checks (flag for user):**
 
@@ -142,6 +143,7 @@ Apply safe, non-destructive auto-fixes from `wiki-maintenance` logic. Every fix 
 - **Frontmatter patching** — add missing `type`, `created`, `updated` fields. Correct `type` values that don't match the parent directory.
 - **Date addition** — fill in missing `created:` dates from `stat -c %y` output, missing `updated:` dates as today.
 - **Category addition** — add missing `category:` field inferred from page `tags` and content keywords.
+- **Domain addition** — add missing `domain:` field inferred from page `category`, `tags`, content keywords, and related source pages' domains. The agent decides the domain value autonomously during autonomous ops.
 
 **Unsafe fixes (skip, report only):**
 
