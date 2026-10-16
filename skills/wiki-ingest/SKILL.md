@@ -452,6 +452,13 @@ Structure: Consult `references/page-templates.md`. Must include:
 
 > **Structured content rule:** Mọi code block, math formula, table, mermaid diagram từ source mà không thuộc riêng entity/concept nào PHẢI được đặt trong source summary page. Không để mất.
 
+**🔒 Anti-Self-Link Rule (Chống liên kết tự thân):**
+Trang Source Summary (`wiki/sources/<slug>.md`) tuyệt đối **KHÔNG ĐƯỢC** chứa wikilink trỏ tới chính slug của nó (`[[<slug>]]`, `[[<slug>|...]]`, `[[<slug>#...]]`).
+- **Đặc biệt:** Trong mục `## Key Claims` và `## Code Examples`, **tuyệt đối không dùng** `(from [[<slug>]])`.
+- Khi cần dẫn chứng xuất xứ cụ thể từ tài liệu gốc, sử dụng cú pháp: `(nguồn: <filename>#L<start>-L<end>)` hoặc `(nguồn: <filename>#L<line>)`. Nếu là URL: `(nguồn: [URL](https://...)#L<line>)`.
+  * *Ví dụ hợp lệ:* `- **Mã hóa là khả năng cơ bản của mọi Agent** (nguồn: chapter5.vi.md#L45-L60)`
+  * *Ví dụ vi phạm (BUG):* `- **Mã hóa là khả năng cơ bản của mọi Agent** (from [[chapter5-coding-agent-va-tao-ma]])`
+
 ---
 
 ### Phase 4: Create or Update Entity and Concept Pages
@@ -476,7 +483,8 @@ For each entity/concept extracted in Phase 1b, create or update pages based on c
 1. Append new source to `sources:` array in frontmatter.
 2. Verify `category` field exists; if missing, add based on page content and current source's category.
 3. Verify `domain` field exists; if missing, add based on current source's domain.
-4. Add new facts with citations `(from [[source-slug]])`. Never delete existing valid facts.
+4. Add new facts with citations `(from [[source-slug]])`. Khuyến khích bổ sung số dòng (line numbers) từ file gốc nếu có: `(from [[source-slug]], nguồn: <filename>#L<start>-L<end>)`. Never delete existing valid facts.
+- **Anti-Self-Link Invariant:** Entity và Concept page tuyệt đối không tạo wikilink tới chính slug của mình (ví dụ trong trang `coding-agent.md`, không dùng `[[coding-agent]]`).
 5. **Stub → Full upgrade:** If an existing stub page receives ≥3 new facts from the current source, upgrade it to a full page and remove `stub: true` from frontmatter.
 6. **Contradictions:** Never silently overwrite. When a claim conflicts with existing knowledge, append to or create:
    ```markdown
@@ -512,6 +520,23 @@ grep -roh '\[\[[^]]*\]\]' "$PROJECT_PATH/wiki/sources/new-page.md" | sed 's/\[\[
 done
 ```
 Resolve any broken links immediately by generating the stub page or fixing the slug.
+
+Verify NO self-referential links exist in created/updated pages (Self-Link Guard):
+```bash
+for page in "$PROJECT_PATH/wiki/sources/new-page.md" "$PROJECT_PATH/wiki/entities/entity.md"; do
+  [ ! -f "$page" ] && continue
+  slug=$(basename "$page" .md)
+  if grep -Pq "\[\[${slug}(\]\]|\||#)" "$page"; then
+    echo "⚠️ SELF-LINK DETECTED in $page — Auto-fixing..."
+    # 1. Gỡ bỏ trích dẫn tự thân (from [[self-slug]])
+    sed -i -E "s/ *\(from \[\[${slug}[^]]*\]\]\)//g" "$page"
+    # 2. Chuyển [[self-slug|alias]] thành alias
+    sed -i -E "s/\[\[${slug}\|([^]]+)\]\]/\1/g" "$page"
+    # 3. Chuyển [[self-slug]] thành plain text
+    sed -i -E "s/\[\[${slug}\]\]/${slug}/g" "$page"
+  fi
+done
+```
 
 Verify all image references resolve to actual files:
 ```bash

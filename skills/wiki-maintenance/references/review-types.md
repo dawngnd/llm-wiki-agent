@@ -14,6 +14,19 @@
    - **Page should exist** → create it with minimal content from context
    - **Stale reference** → remove the wikilink
 
+## Self-referential Link
+
+**Description:** A page contains a `[[wikilink]]` pointing to its own slug, creating a self-loop in the knowledge graph.
+
+**Detection:** In `slug.md`, grep for `\[\[${slug}(\]\]|\||#)`.
+
+**Resolution:**
+1. Check context of the self-link:
+   - **Citation pattern:** `(from [[slug]])` in a source summary page → remove the entire `(from [[slug]])` clause.
+   - **Aliased link:** `[[slug|alias]]` → replace with plain `alias`.
+   - **Bare link:** `[[slug]]` → replace with plain `slug` (remove wikilink brackets).
+2. Save file and verify no self-links remain.
+
 ## Orphan Page
 
 **Description:** A page with zero inbound links from other wiki pages.

@@ -2,6 +2,7 @@
 
 ## Weekly Maintenance
 - [ ] Check for broken wikilinks (`grep -roh '\[\[[^]]*\]\]' wiki/ | sort -u`)
+- [ ] Check for self-referential wikilinks (pages linking to their own slug)
 - [ ] Verify `wiki/index.md` is up to date with all pages
 - [ ] Review recently ingested sources for quality
 - [ ] Check for orphan pages (no inbound links)

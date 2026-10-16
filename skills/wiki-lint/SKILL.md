@@ -79,6 +79,30 @@ grep -rn '\[\[[^]]*\.md\]\]' wiki/ --include="*.md"
 
 Report each broken link with: the source file containing it, the broken `[[link]]` text, and the suggested fix.
 
+### Check 1b: Self-referential Wikilinks (ERROR) — Severity: 10 pts each
+
+Scan every wiki page to verify that **no page contains a wikilink pointing to itself** (`[[page-slug]]`, `[[page-slug|alias]]`, `[[page-slug#section]]`). Self-links distort graph metrics (creating reflexive edges/self-loops) and degrade reading navigation.
+
+```bash
+# Detect self-referential wikilinks
+for f in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ -name "*.md" 2>/dev/null); do
+  slug=$(basename "$f" .md)
+  if grep -Pn "\[\[${slug}(\]\]|\||#)" "$f" > /tmp/self-link-hits.txt; then
+    echo "SELF-LINK in $f:"
+    cat /tmp/self-link-hits.txt
+  fi
+done
+```
+
+**Common patterns:**
+- `(from [[self-slug]])` in Source Summary Pages (leakage from Entity/Concept citation pattern).
+- `[[self-slug]]` in headers or body text of Entity/Concept pages.
+
+**Auto-fix:**
+1. Remove `(from [[self-slug]])` patterns: `sed -i -E "s/ *\(from \[\[${slug}[^]]*\]\]\)//g" "$f"`.
+2. Convert `[[self-slug|alias]]` to `alias`: `sed -i -E "s/\[\[${slug}\|([^]]+)\]\]/\1/g" "$f"`.
+3. Convert `[[self-slug]]` to plain text: `sed -i -E "s/\[\[${slug}\]\]/${slug}/g" "$f"`.
+
 ### Check 2: Orphan Pages (WARNING) — Severity: 3 pts each
 
 Find pages with **zero inbound links** — no other page references them via `[[wikilink]]`.
@@ -303,6 +327,7 @@ Calculate a total wiki health score after all checks complete:
 | Check | Severity per issue | Category |
 |-------|-------------------|----------|
 | 1. Broken Wikilinks | 10 pts | ERROR |
+| 1b. Self-referential Wikilinks | 10 pts | ERROR |
 | 2. Orphan Pages | 3 pts | WARNING |
 | 3. Contradictions | 15 pts | ERROR |
 | 4. Stale Claims | 5 pts | WARNING |
@@ -328,6 +353,7 @@ Present findings grouped by severity:
 
 **Errors (must fix):**
 - Broken wikilinks (Check 1)
+- Self-referential wikilinks (Check 1b)
 - Contradictions (Check 3)
 - Stale index entries (Check 7)
 - Frontmatter errors (Check 9)

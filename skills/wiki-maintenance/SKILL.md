@@ -42,6 +42,13 @@ grep -roh '\[\[[^]]*\]\]' wiki/ | sed 's/\[\[//;s/\]\]//' | sort -u | while read
   find wiki/ -name "${slug}.md" 2>/dev/null | grep -q . || echo "  BROKEN: $slug"
 done
 
+echo -e "\n=== Self-referential Wikilinks ==="
+for page in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ \
+  -name "*.md" -exec basename {} .md \;); do
+  f=$(find wiki/ -name "${page}.md" 2>/dev/null | head -1)
+  [ -f "$f" ] && grep -Pq "\[\[${page}(\]\]|\||#)" "$f" && echo "  SELF-LINK: $page"
+done
+
 echo -e "\n=== Missing from Index ==="
 for page in $(find wiki/sources/ wiki/entities/ wiki/concepts/ wiki/synthesis/ \
   -name "*.md" -exec basename {} .md \;); do
@@ -61,6 +68,7 @@ Categorize issues by severity and effort:
 | Severity | Type | Auto-fixable? | Effort |
 |----------|------|---------------|--------|
 | **Error** | Broken wikilink | Yes (most cases) | Low |
+| **Error** | Self-referential link | Yes | Low |
 | **Error** | Missing frontmatter `type` | Yes | Low |
 | **Warning** | Missing from index | Yes | Low |
 | **Warning** | Missing dates in frontmatter | Yes | Low |
@@ -133,6 +141,37 @@ grep -r "\[\[$old_slug\]\]" wiki/ --include="*.md" && echo "STILL BROKEN" || ech
 ```
 
 For **Case C (missing page):** If no matching page exists and the topic warrants coverage, create a minimal stub. If the reference is unnecessary, remove the wikilink brackets and keep the text as plain prose. Present ambiguous cases to the user.
+
+## Auto-Fix: Self-referential Links / Gỡ Bỏ Liên Kết Tự Thân
+
+Pages must not link to themselves. Self-referential links cause cycles of length 1 (self-loops) in the knowledge graph, artificially inflating in-degree and density metrics while degrading reader navigation.
+
+**Pattern detection and auto-fix rules:**
+1. **Redundant Citation in Source Summary:** `(from [[slug]])` or `(from [[slug#...]])` in `wiki/sources/slug.md` (caused by pattern leakage from entity/concept rules).
+   - **Fix:** Strip the `(from [[slug]])` citation entirely.
+2. **Aliased Self-links:** `[[slug|Display Text]]`
+   - **Fix:** Replace with `Display Text` (keep the text, remove the wikilink brackets).
+3. **Bare Self-links:** `[[slug]]` or `[[slug#section]]`
+   - **Fix:** Replace with `slug` (plain text) or remove brackets.
+
+```bash
+# Detect and auto-fix all self-referential links across wiki
+for dir in sources entities concepts synthesis; do
+  find "wiki/$dir/" -name "*.md" 2>/dev/null | while read f; do
+    slug=$(basename "$f" .md)
+    if grep -Pq "\[\[${slug}(\]\]|\||#)" "$f"; then
+      echo "FIXING self-link in $f (slug: $slug)..."
+      # 1. Gỡ bỏ trích dẫn tự thân (from [[self-slug]])
+      sed -i -E "s/ *\(from \[\[${slug}[^]]*\]\]\)//g" "$f"
+      # 2. Chuyển [[self-slug|alias]] thành alias
+      sed -i -E "s/\[\[${slug}\|([^]]+)\]\]/\1/g" "$f"
+      # 3. Chuyển [[self-slug]] thành plain text
+      sed -i -E "s/\[\[${slug}\]\]/${slug}/g" "$f"
+      echo "  Fixed: $f"
+    fi
+  done
+done
+```
 
 ## Auto-Fix: Index Consistency / Đồng Bộ Index
 
@@ -281,6 +320,7 @@ After completing all fixes, generate a structured summary and append it to `wiki
 
 ### Auto-fixes applied
 - Fixed N broken wikilinks (N title-case, N pascal-case, N extension removals)
+- Fixed N self-referential links (N source citations stripped, N aliases unwrapped, N bare links unlinked)
 - Added N missing pages to wiki/index.md
 - Removed N stale entries from wiki/index.md
 - Patched frontmatter on N pages (N type fixes, N category additions, N domain additions, N date additions, N tag format fixes)

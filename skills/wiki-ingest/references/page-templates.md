@@ -30,8 +30,10 @@ Tóm tắt cấu trúc của nội dung tài liệu nguồn.
 
 ## Key Claims (Các khẳng định chính)
 
-- Khẳng định 1
-- Khẳng định 2
+- Khẳng định 1 (nguồn: original-filename.md#L10-L25)
+- Khẳng định 2 (nguồn: original-filename.md#L45-L60)
+
+> ⚠️ **Quy tắc chống Self-link:** Tuyệt đối KHÔNG sử dụng `(from [[tên-trang-source]])` hoặc `[[tên-trang-source]]` trong trang này. Mọi dẫn chứng từ file gốc bên ngoài chỉ dùng định dạng `(nguồn: filename#L...)`.
 
 <!-- Nếu source có tables/formulas/diagrams liên quan đến claims chính, đặt ở đây -->
 
@@ -98,8 +100,10 @@ Mô tả bối cảnh entity xuất hiện, vai trò trong hệ thống hoặc m
 
 ## Key Facts (Thông tin chính)
 
-- Fact 1 (from [[source-1]])
+- Fact 1 (from [[source-1]], nguồn: original-filename.md#L45-L60)
 - Fact 2 (from [[source-2]])
+
+> ⚠️ **Quy tắc chống Self-link:** Entity page không tự liên kết tới chính nó (không dùng `[[entity-name]]` trong trang `entity-name.md`).
 
 <!-- Nếu có bảng thông số, config snippets, đặt inline ở đây -->
 
@@ -149,8 +153,10 @@ Giải thích ý nghĩa từng thành phần trong công thức.
 
 ## Key Points (Điểm chính)
 
-- Điểm 1
-- Điểm 2
+- Điểm 1 (from [[source-1]], nguồn: original-filename.md#L100-L115)
+- Điểm 2 (from [[source-2]])
+
+> ⚠️ **Quy tắc chống Self-link:** Concept page không tự liên kết tới chính nó (không dùng `[[concept-name]]` trong trang `concept-name.md`).
 
 <!-- Nếu có bảng so sánh, flowchart/mermaid, đặt ở đây -->
 
